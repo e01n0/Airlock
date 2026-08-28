@@ -1,0 +1,4 @@
+Contact: https://github.com/e01n0/Airlock/issues
+Expires: 2027-08-28T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://airlock.rest/.well-known/security.txt

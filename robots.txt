@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://airlock.rest/sitemap.xml

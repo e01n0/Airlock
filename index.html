@@ -1,0 +1,2597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; img-src 'self' data:; media-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; form-action 'self'; manifest-src 'self'" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Airlock" />
+<meta name="application-name" content="Airlock" />
+<meta name="theme-color" content="#080c0f" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<title>Airlock — breathwork trainer for CO2 tolerance</title>
+<meta name="description" content="Free breathwork trainer that builds CO2 tolerance out loud. BOLT test, CO2 and O2 tables, box breathing, coherent breathing, 4-7-8, reduced breathing and apnea walks — tables scaled from your own score. No account, no ads, works offline." />
+<link rel="canonical" href="https://airlock.rest/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Airlock" />
+<meta property="og:title" content="Airlock — breathwork trainer for CO2 tolerance" />
+<meta property="og:description" content="BOLT test, CO2 and O2 tables, box breathing and apnea walks — a spoken breathing coach that scales the work to your own score. Works offline." />
+<meta property="og:url" content="https://airlock.rest/" />
+<meta property="og:image" content="https://airlock.rest/icon-512.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Chakra+Petch:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* ---- Theme contract ----
+       A theme supplies only these nine colours; every other surface in the
+       app is mixed from them, so a new theme is nine hex values and no
+       per-theme CSS. in/out/hold/empty are the four breath phases. */
+    --canvas:#080c0f; --canvas-2:#101820;
+    --in:#2fb6d9; --out:#3f8f78; --hold:#e8a33c; --empty:#c8503f;
+    --tape:#e8f1f4; --steel:#6d8592; --line:#1c2b35;
+
+    /* derived phase ramps — deep is the mid stop, edge the outer vignette */
+    --in-deep:   color-mix(in srgb, var(--in) 46%, #000);
+    --in-edge:   color-mix(in srgb, var(--in) 14%, var(--canvas));
+    --out-deep:  color-mix(in srgb, var(--out) 46%, #000);
+    --out-edge:  color-mix(in srgb, var(--out) 14%, var(--canvas));
+    --hold-deep: color-mix(in srgb, var(--hold) 40%, #000);
+    --hold-edge: color-mix(in srgb, var(--hold) 12%, var(--canvas));
+    --empty-deep:color-mix(in srgb, var(--empty) 42%, #000);
+    --empty-edge:color-mix(in srgb, var(--empty) 13%, var(--canvas));
+    --done:      color-mix(in srgb, var(--canvas-2) 70%, var(--canvas));
+
+    /* ---- HUD token contract ----
+       Geometry is fixed; colour is derived, so every theme reskins the same
+       chassis. --hud-fx (0|1) gates the scanline grid and chromatic split. */
+    --hud-bg:         var(--canvas);
+    --hud-surface:    var(--canvas-2);
+    --hud-ink:        var(--tape);
+    --hud-muted:      var(--steel);
+    --hud-line:       var(--line);
+    --hud-accent:     var(--hold);
+    --hud-accent-ink: var(--canvas);
+    --hud-signal-a:   var(--in);
+    --hud-signal-b:   var(--out);
+    --hud-fx: 0;
+    --hud-chamfer: 14px;
+    --hud-bracket: 22px;
+    --hud-stripe: 10px;
+    --hud-bw: 1.5px;
+    --hud-disp:"Chakra Petch","Barlow Semi Condensed",system-ui,sans-serif;
+    --hud-mono:"Share Tech Mono",ui-monospace,Menlo,Consolas,monospace;
+
+    /* live phase colour — the engine repoints this at each phase change, and
+       the chamber, clock and ring all read it, so one assignment recolours
+       the whole instrument. */
+    --phase: var(--steel);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{background:var(--canvas);color:var(--tape);font-family:"Barlow Semi Condensed",system-ui,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;}
+  #app{height:100dvh;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+       transition:background 1.1s ease;background:radial-gradient(120% 80% at 50% 0%, rgba(255,255,255,.035), transparent 60%),var(--canvas);}
+  #app.in     {--phase:var(--in);    background:radial-gradient(135% 95% at 50% 20%, var(--in-deep) 0%, var(--in-edge) 62%, var(--canvas) 100%);}
+  #app.holdin {--phase:var(--hold);  background:radial-gradient(135% 95% at 50% 20%, var(--hold-deep) 0%, var(--hold-edge) 62%, var(--canvas) 100%);}
+  #app.out    {--phase:var(--out);   background:radial-gradient(135% 95% at 50% 20%, var(--out-deep) 0%, var(--out-edge) 62%, var(--canvas) 100%);}
+  #app.holdout{--phase:var(--empty); background:radial-gradient(135% 95% at 50% 20%, var(--empty-deep) 0%, var(--empty-edge) 62%, var(--canvas) 100%);}
+  #app.breathe{--phase:var(--out);   background:radial-gradient(135% 95% at 50% 20%, var(--out-edge) 0%, var(--canvas) 78%);}
+  #app.recover{--phase:var(--in);    background:radial-gradient(135% 95% at 50% 20%, var(--in-edge) 0%, var(--canvas) 78%);}
+  #app.prep   {--phase:var(--hold);  background:radial-gradient(135% 95% at 50% 20%, var(--hold-edge) 0%, var(--canvas) 80%);}
+  #app.done   {--phase:var(--steel); background:radial-gradient(135% 95% at 50% 18%, var(--done) 0%, var(--canvas) 80%);}
+
+  /* ---------------- header ---------------- */
+  header{display:flex;align-items:flex-start;justify-content:space-between;padding:12px 2px 2px;flex:0 0 auto;}
+  .round-tag{font-family:var(--hud-mono);font-weight:400;letter-spacing:.14em;font-size:14px;color:var(--hud-muted);text-transform:uppercase;display:flex;align-items:baseline;gap:.18em;}
+  .round-tag .rs{color:var(--hud-accent);opacity:.85;}
+  .round-tag b{font-weight:400;color:var(--hud-ink);}
+  .hud-sys{font-family:var(--hud-mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:color-mix(in srgb, var(--hud-muted) 80%, transparent);margin-top:5px;}
+  .hud-sys b{color:var(--hud-accent);font-weight:400;}
+  .dots{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap;max-width:62vw;}
+  .dot{width:8px;height:8px;border-radius:50%;background:color-mix(in srgb, var(--tape) 22%, transparent);transition:background .3s,box-shadow .3s;}
+  .dot.done{background:var(--tape);}
+  .dot.current{background:var(--phase);box-shadow:0 0 0 3px color-mix(in srgb, var(--phase) 28%, transparent);}
+  .headbtns{display:flex;gap:8px;align-items:center;}
+  .gear{width:42px;height:42px;border:none;background:rgba(0,0,0,.2);border-radius:11px;color:var(--tape);font-size:21px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .gear:active{transform:scale(.94);}
+  #openTutorial{font-family:var(--hud-disp);font-weight:700;font-size:20px;}
+  .gear:focus-visible{outline:2px solid var(--hud-accent);outline-offset:3px;}
+
+  /* ---------------- the chamber ---------------- */
+  main{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:0;position:relative;padding:10px 8px 6px;}
+  main::after{content:"";position:absolute;inset:2px;z-index:2;pointer-events:none;
+    --bk:color-mix(in srgb, var(--hud-accent) 52%, var(--hud-line));
+    background:
+      linear-gradient(var(--bk),var(--bk)) left top, linear-gradient(var(--bk),var(--bk)) left top,
+      linear-gradient(var(--bk),var(--bk)) right top, linear-gradient(var(--bk),var(--bk)) right top,
+      linear-gradient(var(--bk),var(--bk)) left bottom, linear-gradient(var(--bk),var(--bk)) left bottom,
+      linear-gradient(var(--bk),var(--bk)) right bottom, linear-gradient(var(--bk),var(--bk)) right bottom;
+    background-repeat:no-repeat;
+    background-size:var(--hud-bracket) 2px, 2px var(--hud-bracket), var(--hud-bracket) 2px, 2px var(--hud-bracket),
+                    var(--hud-bracket) 2px, 2px var(--hud-bracket), var(--hud-bracket) 2px, 2px var(--hud-bracket);
+  }
+  main>*{position:relative;z-index:1;}
+
+  .state-label{font-family:var(--hud-mono);font-size:clamp(14px,4.2vw,20px);letter-spacing:.26em;text-transform:uppercase;color:var(--hud-muted);line-height:1;margin-bottom:8px;}
+  .state-label::before{content:"// ";color:var(--hud-accent);}
+
+  .chamber{position:relative;width:min(78vw, 46vh, 420px);aspect-ratio:1;flex:0 0 auto;display:flex;align-items:center;justify-content:center;}
+  .chamber svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+  /* static shell: tick collar + hazard notches, never animated */
+  .shell{stroke:color-mix(in srgb, var(--hud-line) 90%, transparent);fill:none;stroke-width:1.4;}
+  .tickmark{stroke:color-mix(in srgb, var(--hud-muted) 55%, transparent);stroke-width:1.6;stroke-linecap:round;}
+  .tickmark.maj{stroke:color-mix(in srgb, var(--hud-accent) 70%, transparent);stroke-width:2.4;}
+  /* progress ring — one linear transition per phase, driven from JS */
+  .ring-track{fill:none;stroke:color-mix(in srgb, var(--hud-line) 100%, transparent);stroke-width:5;}
+  .ring-fill{fill:none;stroke:var(--phase);stroke-width:5;stroke-linecap:round;
+    filter:drop-shadow(0 0 6px color-mix(in srgb, var(--phase) 55%, transparent));
+    transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke .8s ease;}
+  /* the iris: what actually breathes */
+  .iris{transform-origin:50% 50%;transform:scale(var(--iris,.44));will-change:transform;}
+  .iris-core{fill:color-mix(in srgb, var(--phase) 26%, transparent);stroke:var(--phase);stroke-width:2;}
+  .iris-glow{fill:color-mix(in srgb, var(--phase) 12%, transparent);stroke:none;}
+  .iris-blade{stroke:color-mix(in srgb, var(--phase) 62%, transparent);stroke-width:1.4;fill:none;}
+  /* readout stacked at the centre of the chamber */
+  .readout{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;}
+  .clock{font-family:var(--hud-disp);font-weight:700;font-size:clamp(46px,15vw,86px);line-height:.92;font-variant-numeric:tabular-nums;color:var(--hud-ink);letter-spacing:.005em;
+    text-shadow:calc(var(--hud-fx)*-1.5px) 0 0 var(--hud-signal-a), calc(var(--hud-fx)*1.5px) 0 0 var(--hud-signal-b);}
+  .cue{font-family:var(--hud-disp);font-weight:700;font-size:clamp(21px,6.4vw,34px);letter-spacing:.14em;text-transform:uppercase;color:var(--phase);line-height:1;margin-bottom:4px;min-height:1em;transition:color .6s ease;}
+  .cue.pulse{animation:cuepop .5s cubic-bezier(.2,.9,.25,1.25);}
+  @keyframes cuepop{0%{opacity:.25;transform:scale(.9);}60%{opacity:1;transform:scale(1.05);}100%{opacity:1;transform:scale(1);}}
+  .sub{font-family:var(--hud-mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--hud-muted);margin-top:6px;min-height:1.1em;}
+
+  .coach-line{margin-top:10px;font-size:14.5px;line-height:1.35;letter-spacing:.03em;color:color-mix(in srgb, var(--tape) 74%, transparent);min-height:2.6em;max-width:330px;padding:0 6px;transition:opacity .4s;}
+  .idle-hint{color:color-mix(in srgb, var(--tape) 62%, transparent);font-size:15px;letter-spacing:.03em;max-width:320px;line-height:1.45;margin-top:12px;}
+
+  /* tap-to-release plate for open-ended holds */
+  .release{display:none;margin-top:12px;font-family:var(--hud-disp);font-weight:700;font-size:15px;letter-spacing:.12em;text-transform:uppercase;color:var(--hud-accent-ink);background:var(--hud-accent);border:none;padding:15px 30px;cursor:pointer;
+    clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);}
+  .release.on{display:block;}
+  .release:active{transform:scale(.97);}
+
+  /* ---------------- footer ---------------- */
+  footer{flex:0 0 auto;display:flex;gap:10px;padding:8px 0 10px;}
+  .btn{flex:1;border:none;cursor:pointer;font-family:var(--hud-disp);font-weight:700;text-transform:uppercase;letter-spacing:.12em;font-size:17px;padding:16px 10px;color:var(--canvas);background:var(--tape);transition:transform .08s,opacity .2s;border-radius:0;
+    clip-path:polygon(var(--hud-chamfer) 0, 100% 0, 100% calc(100% - var(--hud-chamfer)), calc(100% - var(--hud-chamfer)) 100%, 0 100%, 0 var(--hud-chamfer));}
+  .btn:active{transform:scale(.97);}
+  .btn:disabled{opacity:.35;cursor:default;}
+  #startBtn{position:relative;min-height:54px;background:var(--hud-accent);color:var(--hud-accent-ink);padding-left:24px;overflow:hidden;}
+  #startBtn::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--hud-stripe);
+    background:repeating-linear-gradient(45deg, var(--hud-accent) 0 6px, var(--hud-bg) 6px 12px);}
+  .btn.secondary{flex:0 0 27%;min-height:50px;background:transparent;color:var(--hud-ink);border:var(--hud-bw) solid color-mix(in srgb, var(--hud-accent) 50%, var(--hud-line));}
+  .btn.secondary:active{background:color-mix(in srgb, var(--hud-accent) 14%, transparent);}
+  .btn:focus-visible{outline:2px solid var(--hud-accent);outline-offset:3px;}
+
+  .coffee-row{flex:0 0 auto;display:flex;justify-content:center;padding:0 0 12px;}
+  .coffee{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb, var(--tape) 46%, transparent);text-decoration:none;padding:7px 15px;border-radius:999px;border:1px solid color-mix(in srgb, var(--tape) 16%, transparent);background:rgba(0,0,0,.16);transition:color .2s,border-color .2s,transform .08s;}
+  .coffee:hover{color:var(--tape);border-color:color-mix(in srgb, var(--tape) 32%, transparent);}
+  .coffee:active{transform:scale(.96);}
+  #app.in .coffee-row,#app.out .coffee-row,#app.holdin .coffee-row,#app.holdout .coffee-row,
+  #app.breathe .coffee-row,#app.recover .coffee-row,#app.prep .coffee-row{display:none;}
+
+  /* the idle screen's one-line session summary, tap to open Setup */
+  .session-line{margin-top:14px;font-family:var(--hud-mono);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb, var(--tape) 74%, transparent);background:rgba(0,0,0,.18);border:1px solid var(--line);padding:9px 16px;border-radius:999px;cursor:pointer;}
+  .session-line:active{transform:scale(.97);}
+  #app.in .session-line,#app.out .session-line,#app.holdin .session-line,#app.holdout .session-line,
+  #app.breathe .session-line,#app.recover .session-line,#app.prep .session-line,#app.done .session-line{display:none;}
+
+  @media (prefers-reduced-motion: no-preference){
+    .clock{animation:hud-flick calc(9s / (var(--hud-fx) + 0.0001)) steps(1) infinite;}
+    @keyframes hud-flick{0%,97%,100%{opacity:1;}98%{opacity:.85;}99%{opacity:.95;}}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .clock{animation:none;}
+    .cue.pulse{animation:none;}
+    .tut.spot .tut-spot{animation:none;box-shadow:0 0 0 9999px rgba(4,7,9,.84);}
+    .tut-spot{transition:none;}
+  }
+  /* short phones: the coach line is the first thing to go */
+  @media (max-height:680px){
+    .chamber{width:min(70vw, 40vh, 340px);}
+    .coach-line{min-height:1.4em;font-size:13px;}
+    .idle-hint{font-size:13.5px;}
+  }
+
+  /* ---------------- setup sheet ---------------- */
+  .sheet{position:fixed;inset:0;background:var(--canvas);z-index:20;transform:translateY(100%);transition:transform .32s cubic-bezier(.3,.7,.3,1);display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 0;}
+  .sheet.open{transform:translateY(0);}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 10px;}
+  .sheet-head h2{font-family:var(--hud-disp);font-weight:700;letter-spacing:.14em;font-size:22px;text-transform:uppercase;}
+  .close{background:none;border:none;color:var(--tape);font-size:30px;line-height:1;cursor:pointer;padding:8px 14px;margin:-8px -10px;}
+  .tabs{display:flex;gap:6px;padding:0 16px 8px;border-bottom:1px solid var(--line);}
+  .tabs button{flex:1;padding:11px 4px;border:none;background:transparent;color:var(--steel);font-family:inherit;font-weight:700;text-transform:uppercase;letter-spacing:.07em;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;}
+  .tabs button.on{color:var(--tape);border-bottom-color:var(--hud-accent);}
+  .sheet-body{overflow-y:auto;padding:8px 20px 28px;-webkit-overflow-scrolling:touch;flex:1;}
+  .pane{display:none;} .pane.on{display:block;}
+  .sheet-foot{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 20px calc(11px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(0,0,0,.18);}
+  .ver{font-weight:600;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:color-mix(in srgb, var(--tape) 36%, transparent);}
+  .testbtn{font-family:inherit;font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--tape);background:rgba(0,0,0,.28);border:1px solid color-mix(in srgb, var(--tape) 22%, transparent);border-radius:999px;padding:8px 16px;cursor:pointer;transition:transform .08s,border-color .2s;}
+  .testbtn:active{transform:scale(.96);border-color:color-mix(in srgb, var(--tape) 44%, transparent);}
+
+  .field{padding:15px 0;border-bottom:1px solid var(--line);}
+  .field:last-child{border-bottom:none;}
+  .field-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px;gap:10px;}
+  .field-label span:first-child{font-weight:700;letter-spacing:.05em;text-transform:uppercase;font-size:15px;}
+  .field-label .val{font-family:var(--hud-disp);font-weight:700;font-size:19px;color:var(--hud-accent);white-space:nowrap;}
+  .seg{display:flex;gap:7px;flex-wrap:wrap;}
+  .seg.tight{gap:5px;}
+  .seg.tight button{font-size:12px;padding:10px 2px;letter-spacing:.03em;}
+  .seg button{flex:1;min-width:56px;padding:12px 6px;border:1px solid var(--line);background:transparent;color:var(--steel);border-radius:10px;font-family:inherit;font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;}
+  .seg button.on{background:var(--tape);color:var(--canvas);border-color:var(--tape);}
+  select,input[type=text],input[type=number]{width:100%;padding:12px;border-radius:10px;background:var(--canvas-2);color:var(--tape);border:1px solid var(--line);font-family:inherit;font-size:16px;}
+  input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:var(--line);outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--tape);border:3px solid var(--canvas);}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--tape);border:3px solid var(--canvas);}
+  .note{font-size:13px;color:var(--steel);line-height:1.45;margin-top:12px;}
+  .note b{color:color-mix(in srgb, var(--tape) 82%, transparent);}
+  .note.help{display:none;}
+  .note.help.open{display:block;}
+  .lbl-grp{display:inline-flex;align-items:center;gap:7px;}
+  .help-btn{flex:0 0 auto;width:23px;height:23px;line-height:1;padding:0;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--steel);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+  .help-btn.on{color:var(--canvas);background:var(--steel);border-color:var(--steel);}
+
+  .stepper{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--canvas-2);}
+  .stepper button{width:46px;flex:0 0 auto;padding:12px 0;border:none;background:transparent;color:var(--tape);font-size:20px;line-height:1;cursor:pointer;}
+  .stepper button:active{background:color-mix(in srgb, var(--hud-accent) 20%, transparent);}
+  .stepper .sv{flex:1;text-align:center;font-family:var(--hud-disp);font-weight:700;font-size:18px;color:var(--tape);font-variant-numeric:tabular-nums;min-height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .stepper .sv input{width:100%;background:transparent;border:none;color:var(--tape);font-family:var(--hud-disp);font-weight:700;font-size:18px;text-align:center;outline:none;padding:0;}
+  .param-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .param-grid .cap{font-size:12px;color:var(--steel);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;}
+  .param-grid .stepper{width:100%;}
+  .param-grid.one{grid-template-columns:1fr;}
+
+  .toggle-row{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+  .toggle-row .tl{font-weight:700;letter-spacing:.05em;text-transform:uppercase;font-size:15px;}
+  .switch{position:relative;width:52px;height:29px;flex:0 0 auto;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;inset:0;background:var(--line);border-radius:30px;transition:.2s;cursor:pointer;}
+  .slider:before{content:"";position:absolute;height:23px;width:23px;left:3px;top:3px;background:var(--tape);border-radius:50%;transition:.2s;}
+  .switch input:checked + .slider{background:var(--in);}
+  .switch input:checked + .slider:before{transform:translateX(23px);}
+
+  .acc{border-bottom:1px solid var(--line);}
+  .acc summary{list-style:none;cursor:pointer;padding:15px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .acc summary::-webkit-details-marker{display:none;}
+  .acc summary::after{content:"+";color:var(--steel);font-size:19px;line-height:1;}
+  .acc[open] summary::after{content:"\2212";}
+  .acc .acc-t{font-weight:700;letter-spacing:.05em;text-transform:uppercase;font-size:15px;}
+  .acc .cnt{font-size:12px;color:var(--hud-accent);letter-spacing:.05em;text-transform:uppercase;text-align:right;}
+  .acc-body{padding-bottom:16px;}
+
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .wk{position:relative;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:var(--canvas-2);color:var(--tape);cursor:pointer;font-family:inherit;transition:border-color .15s,box-shadow .15s;}
+  .wk.on{border-color:var(--hud-accent);box-shadow:0 0 0 1px var(--hud-accent);}
+  .wk.mine{border-style:dashed;padding-right:28px;}
+  .wkdel{position:absolute;top:3px;right:5px;color:var(--steel);font-size:19px;line-height:1;padding:4px 6px;cursor:pointer;}
+  .wk .nm{font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:13px;}
+  .wk .sub{font-size:12px;color:var(--steel);margin-top:3px;font-variant-numeric:tabular-nums;}
+  .add-row{display:flex;gap:8px;margin-top:10px;}
+  .add-row input{flex:1;}
+  .add-row button,.backup-row button,.addbig{font-family:inherit;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:13px;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--canvas-2);color:var(--tape);cursor:pointer;}
+  .addbig{width:100%;margin-top:8px;border-style:dashed;color:var(--steel);}
+  .backup-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .backup-row button{flex:1;min-width:120px;}
+
+  /* sequence editor rows */
+  .seqrow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--canvas-2);border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-bottom:7px;cursor:pointer;}
+  .seqrow .nm{font-weight:700;font-size:14px;letter-spacing:.04em;text-transform:uppercase;}
+  .seqrow .meta{font-size:11.5px;color:var(--steel);text-transform:uppercase;letter-spacing:.04em;margin-top:2px;font-variant-numeric:tabular-nums;}
+  .seqrow .big{font-family:var(--hud-disp);font-weight:700;font-size:17px;color:var(--hud-accent);white-space:nowrap;}
+  .seqrow.editing{border-color:var(--hud-accent);}
+  .seqedit{background:var(--canvas-2);border:1px solid var(--hud-accent);border-radius:11px;padding:12px;margin-bottom:8px;}
+  .rowbtns{display:flex;gap:6px;margin-top:10px;}
+  .rowbtns button{flex:1;font-family:inherit;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.05em;padding:10px 6px;border-radius:9px;border:1px solid var(--line);background:var(--canvas);color:var(--tape);cursor:pointer;}
+  .rowbtns button.danger{color:var(--empty);border-color:color-mix(in srgb,var(--empty) 45%,var(--line));}
+
+  /* stats + trend */
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+  .stat{background:var(--canvas-2);border:1px solid var(--line);border-radius:11px;padding:10px 5px;text-align:center;}
+  .stat .snum{display:block;font-family:var(--hud-disp);font-weight:700;font-size:22px;color:var(--tape);line-height:1;}
+  .stat .slbl{display:block;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--steel);margin-top:5px;}
+  .stat .snum.word{font-size:15px;line-height:22px;letter-spacing:.03em;}
+  .trend-bars{display:flex;align-items:flex-end;gap:5px;height:76px;padding-top:14px;}
+  .trend-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;}
+  .trend-col .tv{font-size:10px;color:var(--steel);letter-spacing:.03em;}
+  .trend-bar{width:100%;max-width:26px;background:color-mix(in srgb,var(--hud-accent) 50%,var(--canvas-2));border-radius:3px 3px 0 0;min-height:2px;}
+  .trend-bar.cur{background:var(--hud-accent);}
+  .trend-bar.in{background:color-mix(in srgb,var(--in) 70%,var(--canvas-2));}
+  .trend-cap{font-size:11px;color:var(--steel);letter-spacing:.05em;text-transform:uppercase;margin-top:6px;text-align:center;}
+  .badge-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .badge{font-size:11px;letter-spacing:.05em;text-transform:uppercase;padding:5px 9px;border-radius:999px;border:1px solid var(--line);color:var(--steel);opacity:.5;}
+  .badge.on{color:var(--tape);border-color:color-mix(in srgb,var(--hud-accent) 60%,var(--line));background:color-mix(in srgb,var(--hud-accent) 16%,var(--canvas-2));opacity:1;}
+
+  /* the BOLT band readout */
+  .bolt-hero{background:var(--canvas-2);border:1px solid var(--line);border-radius:13px;padding:15px;text-align:center;}
+  .bolt-hero .bnum{font-family:var(--hud-disp);font-weight:700;font-size:52px;line-height:1;color:var(--hud-accent);font-variant-numeric:tabular-nums;}
+  .bolt-hero .bnum small{font-size:19px;color:var(--steel);margin-left:3px;}
+  .bolt-hero .bband{font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--tape);margin-top:5px;}
+  .bolt-hero .bwhen{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--steel);margin-top:3px;}
+  .bolt-scale{display:flex;height:7px;border-radius:4px;overflow:hidden;margin-top:13px;}
+  .bolt-scale span{flex:1;}
+  .bolt-mark{position:relative;height:12px;margin-top:3px;}
+  .bolt-mark i{position:absolute;top:0;width:2px;height:9px;background:var(--tape);transform:translateX(-1px);}
+  .bolt-legend{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--steel);margin-top:2px;}
+
+  .log-list{display:flex;flex-direction:column;gap:7px;}
+  .log-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--canvas-2);border:1px solid var(--line);border-radius:11px;padding:10px 12px;}
+  .log-row .when{font-weight:700;font-size:14px;color:var(--tape);}
+  .log-row .meta{font-size:11px;color:var(--steel);text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
+  .log-row .big{font-family:var(--hud-disp);font-weight:700;font-size:19px;color:var(--hud-accent);line-height:1;text-align:right;white-space:nowrap;}
+  .log-row .big small{display:block;font-family:inherit;font-weight:600;font-size:10px;color:var(--steel);letter-spacing:.04em;text-transform:uppercase;margin-top:3px;}
+  .log-empty{font-size:13px;color:var(--steel);text-align:center;padding:6px 0;}
+
+  .theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .theme-chip{position:relative;text-align:left;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--canvas-2);color:var(--tape);cursor:pointer;font-family:inherit;}
+  .theme-chip.on{border-color:var(--tape);box-shadow:0 0 0 1px var(--tape);}
+  .theme-chip .nm{font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:12.5px;margin-bottom:9px;}
+  .theme-chip .sw{display:flex;gap:5px;}
+  .theme-chip .sw span{width:17px;height:17px;border-radius:5px;display:block;border:1px solid rgba(0,0,0,.25);}
+
+  /* modals: summary, safety gate, sound check, tutorial */
+  .modal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(4,7,9,.78);}
+  .modal.show{display:flex;}
+  .card{width:min(94%,420px);max-height:86dvh;overflow-y:auto;background:var(--canvas-2);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-align:center;}
+  .card .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--steel);}
+  .card .title{font-family:var(--hud-disp);font-weight:700;font-size:26px;letter-spacing:.06em;text-transform:uppercase;margin:5px 0 4px;color:var(--tape);}
+  .card .subline{font-size:13px;color:var(--steel);margin-bottom:15px;text-transform:uppercase;letter-spacing:.04em;}
+  .sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px;}
+  .sum-cell{background:var(--canvas);border:1px solid var(--line);border-radius:11px;padding:11px 5px;}
+  .sum-cell .n{display:block;font-family:var(--hud-disp);font-weight:700;font-size:23px;color:var(--tape);line-height:1;}
+  .sum-cell .l{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--steel);margin-top:5px;}
+  .sum-note{font-size:12.5px;color:var(--steel);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;min-height:1em;}
+  .sum-streak{font-size:13px;color:var(--hud-accent);font-weight:700;margin-bottom:14px;min-height:17px;}
+  .sum-badge{display:none;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:14px;}
+  .sum-badge span{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--hud-accent-ink);background:var(--hud-accent);border-radius:999px;padding:5px 10px;font-weight:700;}
+  .card-actions{display:flex;gap:8px;}
+  .card-actions button{flex:1;padding:13px;border-radius:10px;font-family:inherit;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:14px;cursor:pointer;border:1px solid var(--line);background:var(--canvas);color:var(--tape);}
+  .card-actions .pri{background:var(--hud-accent);border-color:var(--hud-accent);color:var(--hud-accent-ink);}
+  .safety-list{text-align:left;font-size:14px;line-height:1.55;color:var(--tape);background:var(--canvas);border:1px solid color-mix(in srgb,var(--empty) 40%,var(--line));border-radius:11px;padding:13px 15px;margin-bottom:14px;}
+  .safety-list li{margin:0 0 9px 16px;}
+  .safety-list li:last-child{margin-bottom:0;}
+  .safety-list b{color:var(--empty);}
+  .safety-flag{display:flex;align-items:flex-start;gap:9px;background:color-mix(in srgb, var(--empty) 12%, transparent);border:1px solid color-mix(in srgb, var(--empty) 45%, var(--line));border-radius:11px;padding:11px 12px;margin:10px 0 2px;font-size:13.5px;line-height:1.45;color:var(--tape);text-align:left;}
+  .safety-flag b{color:var(--empty);}
+  .hint-bar{display:flex;align-items:flex-start;gap:9px;background:color-mix(in srgb, var(--hud-accent) 12%, transparent);border:1px solid color-mix(in srgb, var(--hud-accent) 45%, var(--line));border-radius:11px;padding:11px 12px;margin:10px 0 2px;font-size:13.5px;line-height:1.45;color:var(--tape);text-align:left;}
+  .hint-bar b{color:var(--hud-accent);}
+  .ac-tips{text-align:left;font-size:14px;line-height:1.6;color:var(--tape);background:var(--canvas);border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:14px;display:none;}
+  .ac-tips.show{display:block;}
+  .ac-tips b{color:var(--hud-accent);}
+  .ac-line{font-size:14.5px;color:var(--steel);margin:6px 0 15px;line-height:1.45;}
+
+  /* tutorial spotlight */
+  .tut{position:fixed;inset:0;z-index:80;display:none;}
+  .tut.show{display:block;}
+  .tut-spot{position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(4,7,9,.84);transition:all .3s cubic-bezier(.3,.7,.3,1);pointer-events:none;}
+  @media (prefers-reduced-motion: no-preference){ .tut.spot .tut-spot{animation:tutpulse 2s ease-in-out infinite;} }
+  @keyframes tutpulse{0%,100%{box-shadow:0 0 0 9999px rgba(4,7,9,.84), 0 0 0 0 color-mix(in srgb,var(--hud-accent) 60%,transparent);}50%{box-shadow:0 0 0 9999px rgba(4,7,9,.84), 0 0 0 7px color-mix(in srgb,var(--hud-accent) 0%,transparent);}}
+  .tut-box{position:absolute;left:16px;right:16px;background:var(--canvas-2);border:1px solid var(--line);border-radius:14px;padding:16px 17px;}
+  .tut-box h3{font-family:var(--hud-disp);font-weight:700;font-size:17px;letter-spacing:.07em;text-transform:uppercase;margin-bottom:7px;}
+  .tut-box p{font-size:14px;line-height:1.5;color:color-mix(in srgb,var(--tape) 82%, transparent);}
+  .tut-nav{display:flex;gap:8px;margin-top:14px;align-items:center;}
+  .tut-nav .step{font-family:var(--hud-mono);font-size:11px;letter-spacing:.14em;color:var(--steel);flex:1;}
+  .tut-nav button{padding:10px 16px;border-radius:9px;border:1px solid var(--line);background:var(--canvas);color:var(--tape);font-family:inherit;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;}
+  .tut-nav button.pri{background:var(--hud-accent);border-color:var(--hud-accent);color:var(--hud-accent-ink);}
+  .iris.free{animation:freebreath 5.4s ease-in-out infinite;}
+  @keyframes freebreath{0%,100%{opacity:.72;}50%{opacity:1;}}
+  .iris.fast{animation:freebreath 1.1s ease-in-out infinite;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <div class="round-tag"><span class="rl">RND</span> <b id="roundNow">01</b><span class="rs">//</span><b id="roundTotal">08</b></div>
+      <div class="dots" id="dots"></div>
+      <div class="hud-sys">LOCK<b>//</b><span id="hudProto">STANDBY</span></div>
+    </div>
+    <div class="headbtns">
+      <button class="gear" id="openTutorial" aria-label="How it works">?</button>
+      <button class="gear" id="openSettings" aria-label="Setup">&#9881;</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="state-label" id="stateLabel">Ready</div>
+
+    <div class="chamber" id="chamber">
+      <!-- static shell: collar, ticks, hazard notches. Never animated. -->
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="shell" cx="100" cy="100" r="95"/>
+        <g id="collar"></g>
+      </svg>
+      <!-- progress ring: one linear transition per phase, driven from JS -->
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="ring-track" cx="100" cy="100" r="86"/>
+        <circle class="ring-fill" id="ring" cx="100" cy="100" r="86"/>
+      </svg>
+      <!-- the iris: the part that actually breathes -->
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <g class="iris" id="iris">
+          <circle class="iris-glow" cx="100" cy="100" r="78"/>
+          <circle class="iris-core" cx="100" cy="100" r="62"/>
+          <g id="blades"></g>
+        </g>
+      </svg>
+      <div class="readout">
+        <div class="cue" id="cue"></div>
+        <div class="clock" id="clock">00:00</div>
+        <div class="sub" id="subLine"></div>
+      </div>
+    </div>
+
+    <button class="release" id="releaseBtn">Tap on first urge</button>
+    <div class="coach-line" id="coachLine"></div>
+    <button class="session-line" id="sessionLine"></button>
+    <div class="idle-hint" id="idleHint">Sit or lie down somewhere safe. Tap start &mdash; the chamber paces every breath and the coach calls it out loud.</div>
+  </main>
+
+  <footer>
+    <button class="btn secondary" id="resetBtn">Reset</button>
+    <button class="btn secondary" id="skipBtn" disabled>Skip</button>
+    <button class="btn" id="startBtn">Start</button>
+  </footer>
+
+  <div class="coffee-row">
+    <a class="coffee" href="https://buymeacoffee.com/airlock" target="_blank" rel="noopener noreferrer"><span class="cup">&#9749;</span> Buy me a coffee</a>
+  </div>
+</div>
+
+<!-- ============================ SETUP SHEET ============================ -->
+<div class="sheet" id="sheet">
+  <div class="sheet-head">
+    <h2>Setup</h2>
+    <button class="close" id="closeSettings" aria-label="Close">&times;</button>
+  </div>
+  <div class="tabs" id="tabs">
+    <button data-pane="session" class="on">Session</button>
+    <button data-pane="coaching">Coaching</button>
+    <button data-pane="more">More</button>
+  </div>
+  <div class="sheet-body">
+
+    <!-- ---------------- SESSION ---------------- -->
+    <div class="pane on" id="pane-session">
+      <div class="field">
+        <div class="seg" id="segMode">
+          <button data-v="single" class="on">One protocol</button>
+          <button data-v="sequence">Sequence</button>
+        </div>
+      </div>
+
+      <div id="singleBox">
+        <div class="field">
+          <div class="field-label"><span>Protocol</span><span class="val" id="vSingleLen"></span></div>
+          <select id="sProto"></select>
+          <div class="note" id="protoNote"></div>
+        </div>
+        <div class="field" id="paramField">
+          <div class="field-label"><span>Dial it in</span></div>
+          <div class="param-grid" id="paramGrid"></div>
+          <div class="note" id="paramNote"></div>
+        </div>
+      </div>
+
+      <div id="seqBox" style="display:none;">
+        <div class="field">
+          <div class="field-label"><span>Blocks</span><span class="val" id="vSeqLen"></span></div>
+          <div id="seqList"></div>
+          <button class="addbig" id="addBlock">+ Add block</button>
+          <div class="note">Tap a block to open it &mdash; each has its own protocol and settings, and they run back to back. Good for a warm-up pattern into a table, or a table into a wind-down.</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>Quick start</span></div>
+        <div class="cards" id="presetGrid"></div>
+        <div class="add-row"><input id="wkName" type="text" placeholder="Save current setup as&hellip;" maxlength="24"><button id="wkSave">Save</button></div>
+      </div>
+
+      <details class="acc" id="planAcc">
+        <summary><span class="acc-t">4-week program</span><span class="cnt" id="planState"></span></summary>
+        <div class="acc-body">
+          <div class="note" style="margin-top:0;">Twelve sessions over four weeks, three a week, scaled from your own BOLT score &mdash; from first paced breathing to a full CO&#8322; table. Load the next one and hit start; finishing it ticks it off.</div>
+          <div class="seqedit" id="planCard" style="margin-top:10px;"></div>
+          <div class="backup-row">
+            <button id="planLoad">Load next session</button>
+            <button id="planReset">Restart program</button>
+          </div>
+        </div>
+      </details>
+
+      <div class="field">
+        <div class="field-label"><span>Get ready</span><span class="val" id="vPrepLbl"></span></div>
+        <div class="stepper" style="max-width:200px;" data-t="prep"><button data-st="prep" data-d="-1">&minus;</button><div class="sv" id="vPrep">0:10</div><button data-st="prep" data-d="1">+</button></div>
+        <div class="note">A settling countdown before the first breath &mdash; time to get comfortable and put the phone down.</div>
+      </div>
+    </div>
+
+    <!-- ---------------- COACHING ---------------- -->
+    <div class="pane" id="pane-coaching">
+      <div class="field">
+        <div class="field-label"><span class="lbl-grp">Coach voice <button class="help-btn" data-help="hVoice">?</button></span></div>
+        <select id="sVoice"></select>
+        <div class="note help" id="hVoice">Airlock speaks with <b>recorded clips</b> when a voice pack is installed &mdash; every cue is a short audio file, so the coach sounds like a person and works offline. <b>Device voice</b> uses your phone&rsquo;s own speech engine, which needs no download but sounds like a phone. <b>Tones only</b> drops speech entirely and paces you with the chamber and the chime.</div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>How much the coach says</span></div>
+        <div class="seg tight" id="segChatter">
+          <button data-v="full">Full</button>
+          <button data-v="normal" class="on">Normal</button>
+          <button data-v="sparse">Sparse</button>
+          <button data-v="silent">Silent</button>
+        </div>
+        <div class="note"><b>Full</b> counts you through the long phases and adds a coaching line on every hold. <b>Normal</b> calls each phase and coaches now and then. <b>Sparse</b> calls the phase and nothing else. <b>Silent</b> leaves the talking to the tones.</div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>Voice speed</span><span class="val" id="vSpeed">1&times;</span></div>
+        <input type="range" id="sSpeed" min="0.7" max="1.35" step="0.01" value="1">
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span class="lbl-grp">Chime <button class="help-btn" data-help="hChime">?</button></span></div>
+        <div class="seg tight" id="segChime">
+          <button data-v="off">Off</button>
+          <button data-v="soft" class="on">Soft</button>
+          <button data-v="bell">Bell</button>
+          <button data-v="bowl">Bowl</button>
+        </div>
+        <div class="note help" id="hChime">A tone at every phase change, synthesised in the browser &mdash; no download, always works offline. It rises into an inhale and falls into an exhale, so you can pace with your eyes shut and the phone face down.</div>
+      </div>
+
+      <div class="field">
+        <div class="toggle-row">
+          <span class="tl">Guide tone</span>
+          <label class="switch"><input type="checkbox" id="sGuide"><span class="slider"></span></label>
+        </div>
+        <div class="note">A continuous tone that glides up through the inhale and down through the exhale, and rests flat on a hold. Follow it instead of the screen.</div>
+      </div>
+
+      <div class="field">
+        <div class="toggle-row">
+          <span class="tl">Count the last five</span>
+          <label class="switch"><input type="checkbox" id="sCount" checked><span class="slider"></span></label>
+        </div>
+        <div class="note">Spoken 5&ndash;4&ndash;3&ndash;2&ndash;1 into the end of a hold or a breathe-up, so you know exactly when it lands.</div>
+      </div>
+
+      <div class="field">
+        <div class="toggle-row">
+          <span class="tl">Vibrate on phase change</span>
+          <label class="switch"><input type="checkbox" id="sVibrate" checked><span class="slider"></span></label>
+        </div>
+        <div class="note">Android only &mdash; iOS Safari doesn&rsquo;t let a web app buzz.</div>
+      </div>
+
+      <div class="field">
+        <div class="toggle-row">
+          <span class="tl">Play on silent</span>
+          <label class="switch"><input type="checkbox" id="sSilent" checked><span class="slider"></span></label>
+        </div>
+        <div class="note">iOS only. On, the coach plays through the mute switch like a music app. Off, it ducks politely under whatever you&rsquo;re listening to &mdash; but then the mute switch silences it too.</div>
+      </div>
+
+      <div class="field">
+        <div class="toggle-row">
+          <span class="tl">Keep the screen on</span>
+          <label class="switch"><input type="checkbox" id="sWake" checked><span class="slider"></span></label>
+        </div>
+        <div class="note">Holds a wake lock for the session so the chamber stays visible.</div>
+      </div>
+    </div>
+
+    <!-- ---------------- MORE ---------------- -->
+    <div class="pane" id="pane-more">
+      <details class="acc" id="boltAcc" open>
+        <summary><span class="acc-t">CO&#8322; tolerance</span><span class="cnt" id="boltState"></span></summary>
+        <div class="acc-body">
+          <div class="bolt-hero" id="boltHero"></div>
+          <div class="note">The <b>BOLT score</b> (Body Oxygen Level Test) is how long you can comfortably hold after a normal, relaxed exhale &mdash; stopping at the <b>first definite urge to breathe</b>, not at your limit. It tracks how sensitive your body is to CO&#8322;, and it is the number this app is built to move. Measure it first thing in the morning, before coffee and before any breathing practice, for a number you can compare week to week.</div>
+          <div class="backup-row">
+            <button id="boltRun">Take the test</button>
+            <button id="boltManual">Enter manually</button>
+          </div>
+          <div class="field" style="border-bottom:none;padding-bottom:0;">
+            <div class="field-label"><span>Twelve-week trend</span></div>
+            <div class="trend-bars" id="boltTrend"></div>
+            <div class="trend-cap" id="boltTrendCap"></div>
+          </div>
+          <div class="toggle-row" style="margin-top:14px;">
+            <span class="tl">Scale sessions to my score</span>
+            <label class="switch"><input type="checkbox" id="sScale" checked><span class="slider"></span></label>
+          </div>
+          <div class="note">On, hold and breathe-up lengths in the tables are computed from your latest BOLT instead of fixed numbers, so the work stays honest as your tolerance climbs. Off, the tables use the durations you dial in.</div>
+        </div>
+      </details>
+
+      <details class="acc" id="recordAcc">
+        <summary><span class="acc-t">Your record</span><span class="cnt" id="recordState"></span></summary>
+        <div class="acc-body">
+          <div class="stats-grid" id="statsGrid"></div>
+          <div class="field">
+            <div class="field-label"><span>Sessions per week</span></div>
+            <div class="trend-bars" id="weekTrend"></div>
+            <div class="trend-cap" id="weekTrendCap"></div>
+          </div>
+          <div class="field">
+            <div class="field-label"><span>Weekly goal</span><span class="val" id="vGoal"></span></div>
+            <div class="stepper" style="max-width:200px;"><button data-goal="-1">&minus;</button><div class="sv" id="goalVal">3</div><button data-goal="1">+</button></div>
+            <div class="note" id="goalNote"></div>
+          </div>
+          <div class="field">
+            <div class="field-label"><span>Bests</span></div>
+            <div class="note" id="bestsNote" style="margin-top:0;"></div>
+          </div>
+          <div class="field">
+            <div class="field-label"><span>Milestones</span></div>
+            <div class="badge-row" id="badgeRow"></div>
+          </div>
+        </div>
+      </details>
+
+      <details class="acc" id="logAcc">
+        <summary><span class="acc-t">Session log</span><span class="cnt" id="logState"></span></summary>
+        <div class="acc-body"><div class="log-list" id="logList"></div></div>
+      </details>
+
+      <details class="acc" id="guideAcc">
+        <summary><span class="acc-t">Protocol guide</span><span class="cnt">11 protocols</span></summary>
+        <div class="acc-body"><div id="guideList"></div></div>
+      </details>
+
+      <details class="acc" id="safetyAcc">
+        <summary><span class="acc-t">Safety</span><span class="cnt">Read this</span></summary>
+        <div class="acc-body">
+          <ul class="safety-list">
+            <li><b>Never in or near water.</b> Breath-holding before or during swimming causes shallow-water blackout and it is the single most common way apnea training kills people. Not in the bath, not in the pool, not on a paddleboard.</li>
+            <li><b>Never while driving,</b> cycling, standing on stairs, or operating anything.</li>
+            <li><b>Sit or lie down.</b> Holds and fast breathing can make you faint. A faint on the floor is a nuisance; a faint standing up is an injury.</li>
+            <li>Stop at once if you feel dizzy, get pins and needles that don&rsquo;t settle, see spots, or your chest hurts. Breathe normally and rest.</li>
+            <li>Talk to a doctor first if you are <b>pregnant</b>, or have <b>epilepsy</b>, <b>high blood pressure</b>, <b>heart or lung disease</b>, a history of <b>fainting</b>, panic disorder, or an aneurysm.</li>
+            <li>Air hunger is meant to be uncomfortable. Pain, panic and losing control are not the training &mdash; back off the numbers.</li>
+            <li>Airlock is a training timer, not medical advice or a medical device.</li>
+          </ul>
+          <div class="backup-row"><button id="safetyReshow">Show the safety card again</button></div>
+        </div>
+      </details>
+
+      <div class="field">
+        <div class="field-label"><span>Theme</span></div>
+        <div class="theme-grid" id="themeGrid"></div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>Backup &amp; restore</span></div>
+        <div class="backup-row">
+          <button id="btnExport">Export .airlock</button>
+          <button id="btnImport">Import</button>
+        </div>
+        <input type="file" id="fileImport" accept=".airlock,.json,application/json" style="display:none;">
+        <div class="note">Everything Airlock knows &mdash; settings, saved sessions, your BOLT history and session log &mdash; lives on this device only. Export a copy before changing phone.</div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>Offline</span></div>
+        <div class="backup-row"><button id="btnPrefetch">Take the coach offline</button></div>
+        <div class="note" id="prefetchNote">Downloads the whole voice pack in one go, so the coach still talks with no signal. The app shell and the tones already work offline.</div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>Start over</span></div>
+        <div class="backup-row"><button id="btnWipe" style="color:var(--empty);">Erase everything on this device</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="testbtn" id="btnTestVoice">Test voice</button>
+    <div class="ver" id="verLine"></div>
+  </div>
+</div>
+
+<!-- ============================ MODALS ============================ -->
+<div class="modal" id="safetyGate">
+  <div class="card">
+    <div class="eyebrow">Before your first session</div>
+    <div class="title">Read this once</div>
+    <ul class="safety-list">
+      <li><b>Never in or near water.</b> Breath-holding and swimming is how apnea training kills people &mdash; shallow-water blackout gives no warning.</li>
+      <li><b>Sit or lie down,</b> somewhere you could safely faint. Never while driving or standing.</li>
+      <li>Stop if you feel dizzy, see spots, or your chest hurts. Breathe normally.</li>
+      <li>Ask a doctor first if pregnant, epileptic, or living with heart, lung or blood-pressure conditions.</li>
+    </ul>
+    <div class="card-actions">
+      <button class="pri" id="safetyOk">I understand</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="audioCheck">
+  <div class="card">
+    <div class="eyebrow">One-time check</div>
+    <div class="title">Can you hear the coach?</div>
+    <div class="ac-line" id="acLine">That was a test cue. If you heard nothing, turn the volume up and try again.</div>
+    <div class="ac-tips" id="acTips">
+      <b>Nothing at all?</b> Turn the media volume up with the side buttons while this page is open.<br><br>
+      <b>iPhone:</b> flick the mute switch off, then try again. Airlock plays through the mute switch by default, but some cases block it.<br><br>
+      <b>Bluetooth:</b> check the audio is going where you think it is.
+    </div>
+    <div class="card-actions">
+      <button id="acAgain">Play it again</button>
+      <button class="pri" id="acOk">Heard it</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="summary">
+  <div class="card">
+    <div class="eyebrow" id="sumEyebrow">Session complete</div>
+    <div class="title" id="sumTitle">Locked out</div>
+    <div class="subline" id="sumSub"></div>
+    <div class="sum-grid" id="sumGrid"></div>
+    <div class="sum-note" id="sumNote"></div>
+    <div class="sum-streak" id="sumStreak"></div>
+    <div class="sum-badge" id="sumBadges"></div>
+    <div class="card-actions">
+      <button id="sumLog">Session log</button>
+      <button class="pri" id="sumClose">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="boltModal">
+  <div class="card">
+    <div class="eyebrow">CO&#8322; tolerance</div>
+    <div class="title" id="boltTitle">BOLT result</div>
+    <div class="subline" id="boltSub"></div>
+    <div class="bolt-hero" id="boltResult" style="margin-bottom:14px;"></div>
+    <div class="sum-note" id="boltAdvice"></div>
+    <div class="card-actions">
+      <button id="boltRedo">Test again</button>
+      <button class="pri" id="boltSave">Save it</button>
+    </div>
+  </div>
+</div>
+
+<div class="tut" id="tut">
+  <div class="tut-spot" id="tutSpot"></div>
+  <div class="tut-box" id="tutBox">
+    <h3 id="tutTitle"></h3>
+    <p id="tutText"></p>
+    <div class="tut-nav">
+      <span class="step" id="tutStep"></span>
+      <button id="tutSkip">Skip</button>
+      <button class="pri" id="tutNext">Next</button>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+  "use strict";
+  const APP_VERSION = "v1";
+
+  /* ---------- safe storage (never throws; persists on the real site, no-ops in a sandbox) ---------- */
+  const store = (() => {
+    let ok = false;
+    try { const k="__al"; localStorage.setItem(k,"1"); localStorage.removeItem(k); ok=true; } catch(e){ ok=false; }
+    const mem = {};
+    return {
+      get(k){ try{ return ok ? localStorage.getItem(k) : (mem[k]??null); }catch(e){ return mem[k]??null; } },
+      set(k,v){ try{ ok ? localStorage.setItem(k,v) : (mem[k]=v); }catch(e){ mem[k]=v; } },
+      del(k){ try{ ok ? localStorage.removeItem(k) : (delete mem[k]); }catch(e){ delete mem[k]; } }
+    };
+  })();
+
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const rnd   = (a,b) => a + Math.random()*(b-a);
+  const pick  = arr => arr[Math.floor(Math.random()*arr.length)];
+  const pad2  = n => String(n).padStart(2,"0");
+  const fmt   = s => `${pad2(Math.floor(s/60))}:${pad2(Math.floor(s%60))}`;
+  const fmtS  = s => `${Math.floor(s/60)}:${pad2(Math.floor(s%60))}`;          // 2:00, no leading zero
+  const fmtDur= s => s<60 ? `${Math.round(s)}s` : (s%60 ? `${Math.floor(s/60)}:${pad2(Math.round(s%60))}` : `${Math.floor(s/60)} min`);
+  const fmtSec= s => (Math.round(s*10)%10 ? s.toFixed(1) : String(Math.round(s))) + "s";
+
+  /* ---------- parameter dictionary ----------
+     Every protocol dial is declared once here: its range, its step and how it
+     reads on screen. The parameter grid is built from these, so adding a dial
+     to a protocol is one entry in its `params` list — no new markup. */
+  const PARAMS = {
+    rounds:  {cap:"Rounds",        min:1,   max:20,  step:1,   f:"n"},
+    hold:    {cap:"Hold",          min:5,   max:300, step:5,   f:"t"},
+    base:    {cap:"First hold",    min:10,  max:180, step:5,   f:"t"},
+    holdStep:{cap:"Hold grows by", min:0,   max:30,  step:5,   f:"t"},
+    rest:    {cap:"Breathe up",    min:15,  max:300, step:5,   f:"t"},
+    restStep:{cap:"Rest shrinks",  min:0,   max:30,  step:5,   f:"t"},
+    mins:    {cap:"Minutes",       min:1,   max:45,  step:1,   f:"m"},
+    inS:     {cap:"Inhale",        min:1,   max:20,  step:0.5, f:"s"},
+    hiS:     {cap:"Hold in",       min:0,   max:20,  step:0.5, f:"s"},
+    outS:    {cap:"Exhale",        min:1,   max:20,  step:0.5, f:"s"},
+    hoS:     {cap:"Hold out",      min:0,   max:20,  step:0.5, f:"s"},
+    cycles:  {cap:"Cycles",        min:1,   max:40,  step:1,   f:"n"},
+    breaths: {cap:"Breaths",       min:10,  max:60,  step:5,   f:"n"},
+    recover: {cap:"Recovery hold", min:0,   max:30,  step:5,   f:"t"},
+    walks:   {cap:"Walks",         min:2,   max:12,  step:1,   f:"n"},
+    prep:    {cap:"Get ready",     min:0,   max:60,  step:5,   f:"t"}
+  };
+  function pfmt(key, v){
+    const f = PARAMS[key].f;
+    if(f==="n") return String(v);
+    if(f==="m") return `${v} min`;
+    if(f==="s") return fmtSec(v);
+    return v<60 ? `${v}s` : fmtS(v);
+  }
+
+  /* ---------- protocols ----------
+     Each protocol is a schedule generator plus the dials it exposes. `kind`
+     drives the on-screen language and which coaching pool the corner draws
+     from; `lungs` protocols additionally let you hold on full or empty lungs,
+     which is the difference between freediving-style tables and the
+     Buteyko-style work that transfers to your BOLT score. */
+  const PROTOS = {
+    bolt: { label:"BOLT test", tag:"BOLT", kind:"test", params:[],
+      blurb:"Breathe normally for a minute, then hold after a relaxed exhale and tap the moment you feel the <b>first definite urge to breathe</b> — not your maximum. That number is your CO₂ tolerance, and it is what everything else here is trying to move.",
+      make(){ return [
+        {k:"breathe", secs:60, r:1, lbl:"Settle", say:"Breathe normally through your nose. Relax."},
+        {k:"holdout", secs:0, open:true, r:1, lbl:"Hold", test:true, say:"Normal breath out. Hold."}
+      ]; } },
+
+    co2: { label:"CO₂ table", tag:"CO2 TABLE", kind:"table", lungs:true,
+      params:["rounds","hold","rest","restStep"],
+      blurb:"The hold stays the same length every round while the recovery between holds shrinks, so you start each hold with more CO₂ still on board than the last. This is the direct CO₂-tolerance table — the one that moves your BOLT.",
+      make(b){
+        const out=[]; const holdK = b.lungs==="full" ? "holdin" : "holdout";
+        for(let i=0;i<b.rounds;i++){
+          const rest = Math.max(15, b.rest - b.restStep*i);
+          out.push({k:"breathe", secs:rest, r:i+1, lbl:"Breathe up"});
+          out.push({k:holdK, secs:b.hold, r:i+1, lbl:"Hold"});
+        }
+        return out;
+      } },
+
+    o2: { label:"O₂ table", tag:"O2 TABLE", kind:"table", lungs:true,
+      params:["rounds","base","holdStep","rest"],
+      blurb:"Recovery stays generous and the hold gets longer every round, so you finish each one deeper into low oxygen. It builds hold length rather than CO₂ tolerance — run it on a different day to the CO₂ table, never straight after one.",
+      make(b){
+        const out=[]; const holdK = b.lungs==="full" ? "holdin" : "holdout";
+        for(let i=0;i<b.rounds;i++){
+          out.push({k:"breathe", secs:b.rest, r:i+1, lbl:"Breathe up"});
+          out.push({k:holdK, secs:b.base + b.holdStep*i, r:i+1, lbl:"Hold"});
+        }
+        return out;
+      } },
+
+    pyramid: { label:"Pyramid table", tag:"PYRAMID", kind:"table", lungs:true,
+      params:["rounds","base","holdStep","rest"],
+      blurb:"Holds climb to a peak in the middle of the session and come back down the other side. The descent is the interesting half: the same hold that felt long on the way up arrives easy on the way down.",
+      make(b){
+        const out=[]; const holdK = b.lungs==="full" ? "holdin" : "holdout";
+        const n = b.rounds, mid = (n-1)/2;
+        for(let i=0;i<n;i++){
+          const rung = Math.round(mid - Math.abs(i-mid));
+          out.push({k:"breathe", secs:b.rest, r:i+1, lbl:"Breathe up"});
+          out.push({k:holdK, secs:b.base + b.holdStep*rung, r:i+1, lbl:"Hold"});
+        }
+        return out;
+      } },
+
+    box: { label:"Box breathing", tag:"BOX", kind:"pattern", params:["mins","inS","hiS","outS","hoS"],
+      blurb:"Equal in, hold, out, hold. The two holds are what make it CO₂ work rather than just a calm-down — the empty-lung hold at the end of each box is where the tolerance is built. Lengthen the box as it gets easy.",
+      make(b){ return patternCycles(b, b.mins*60); } },
+
+    coherent: { label:"Coherent breathing", tag:"COHERENT", kind:"pattern", params:["mins","inS","outS"],
+      blurb:"Around six breaths a minute, in and out through the nose with no holds — the rate where heart rate and breath fall into step. It slows your resting breathing rate, which is half of what a good BOLT score is made of.",
+      make(b){ return patternCycles({...b, hiS:0, hoS:0}, b.mins*60); } },
+
+    p478: { label:"4-7-8", tag:"4-7-8", kind:"pattern", params:["cycles","inS","hiS","outS"],
+      blurb:"In for four, hold for seven, out for eight. The long exhale and the long hold both push CO₂ up, and the ratio makes it a reliable down-shift before sleep. Four to eight cycles is plenty.",
+      make(b){ return patternCycles({...b, hoS:0}, null, b.cycles); } },
+
+    exhale: { label:"Extended exhale", tag:"EXHALE", kind:"pattern", params:["mins","inS","outS","hoS"],
+      blurb:"An exhale roughly twice the inhale, with a pause on empty. Long exhales lean the whole session towards the parasympathetic side, and the pause on empty is where the air hunger lives.",
+      make(b){ return patternCycles({...b, hiS:0}, b.mins*60); } },
+
+    reduced: { label:"Reduced breathing", tag:"REDUCED", kind:"reduced", params:["rounds","mins","inS","outS","hoS"],
+      blurb:"Buteyko-style light breathing: deliberately take in less air than you want, so a mild, steady air hunger sits with you for the whole block. Uncomfortable, never distressing. This is the least dramatic protocol here and one of the most effective.",
+      make(b){
+        const out=[];
+        for(let i=0;i<b.rounds;i++){
+          out.push(...patternCycles({...b, hiS:0}, b.mins*60, null, i+1, "Breathe light"));
+          if(i<b.rounds-1) out.push({k:"breathe", secs:45, r:i+1, lbl:"Normal breathing"});
+        }
+        return out;
+      } },
+
+    apnea: { label:"Power breathing", tag:"POWER", kind:"apnea", params:["rounds","breaths","hold","recover"],
+      blurb:"Rounds of fast, full breaths, then an exhale hold, then one big breath held on top. The fast breathing blows CO₂ <i>off</i>, so the hold is long — it trains composure and the low-oxygen end, not CO₂ tolerance. Lying down, always. Set the hold to zero to hold by feel and tap to finish.",
+      warn:"Fast breathing can make you faint. Lie down, never in water, and stop if you feel odd.",
+      make(b){
+        const out=[];
+        for(let i=0;i<b.rounds;i++){
+          out.push({k:"power", secs:Math.round(b.breaths*2.2), r:i+1, lbl:"Power breaths", breaths:b.breaths});
+          out.push({k:"holdout", secs:b.hold, open:b.hold===0, r:i+1, lbl:"Hold"});
+          if(b.recover>0) out.push({k:"holdin", secs:b.recover, r:i+1, lbl:"Recovery hold"});
+        }
+        return out;
+      } },
+
+    walk: { label:"Apnea walk", tag:"WALK", kind:"walk", params:["walks","hold","rest"],
+      blurb:"Walk at an easy pace. On the hold, breathe out normally, pinch your nose and keep walking until the timer releases you — movement drives CO₂ up far faster than sitting still, so the holds are short and they bite. Outdoors, level ground, nowhere you could fall badly.",
+      warn:"Level ground only, and never near traffic or water.",
+      make(b){
+        const out=[];
+        for(let i=0;i<b.walks;i++){
+          out.push({k:"breathe", secs:b.rest, r:i+1, lbl:"Walk and breathe"});
+          out.push({k:"holdout", secs:b.hold, r:i+1, lbl:"Walk on the hold", walk:true});
+        }
+        return out;
+      } }
+  };
+  const PROTO_IDS = ["bolt","co2","o2","pyramid","box","coherent","p478","exhale","reduced","apnea","walk"];
+
+  /* Expand a breathing pattern into one segment per phase. Either a duration
+     (fill `secs` seconds with whole cycles) or an explicit cycle count. Phases
+     set to zero are dropped, so coherent breathing is just in/out. */
+  function patternCycles(b, secs, cycles, round, label){
+    const ph = [["in",b.inS],["holdin",b.hiS],["out",b.outS],["holdout",b.hoS]].filter(p=>p[1]>0);
+    const len = ph.reduce((a,p)=>a+p[1],0);
+    if(!len) return [];
+    const n = cycles || Math.max(1, Math.round(secs/len));
+    const out=[];
+    for(let i=0;i<n;i++) ph.forEach(([k,s])=>out.push({k, secs:s, r:round||(i+1), cyc:i+1, cycN:n, lbl:label||null}));
+    return out;
+  }
+
+  /* ---------- defaults per protocol ---------- */
+  const PROTO_DEF = {
+    bolt:     {},
+    co2:      {rounds:8, hold:45, rest:120, restStep:15, lungs:"empty"},
+    o2:       {rounds:8, base:40, holdStep:10, rest:120, lungs:"full"},
+    pyramid:  {rounds:7, base:30, holdStep:15, rest:90, lungs:"empty"},
+    box:      {mins:5, inS:4, hiS:4, outS:4, hoS:4},
+    coherent: {mins:10, inS:5.5, outS:5.5},
+    p478:     {cycles:8, inS:4, hiS:7, outS:8},
+    exhale:   {mins:6, inS:4, outS:8, hoS:2},
+    reduced:  {rounds:4, mins:2, inS:3, outS:4, hoS:3},
+    apnea:    {rounds:3, breaths:30, hold:0, recover:15},
+    walk:     {walks:6, hold:30, rest:60}
+  };
+  function normBlock(b){
+    const proto = PROTOS[b && b.proto] ? b.proto : "box";
+    const out = Object.assign({proto}, PROTO_DEF[proto], b||{});
+    out.proto = proto;
+    PROTOS[proto].params.forEach(k=>{
+      const P = PARAMS[k];
+      let v = Number(out[k]);
+      if(!isFinite(v)) v = PROTO_DEF[proto][k];
+      out[k] = clamp(Math.round(v/P.step)*P.step, P.min, P.max);
+    });
+    if(PROTOS[proto].lungs && out.lungs!=="full" && out.lungs!=="empty") out.lungs = PROTO_DEF[proto].lungs;
+    return out;
+  }
+  const blockLen = b => PROTOS[b.proto].make(normBlock(b)).reduce((a,s)=>a + (s.open?45:s.secs), 0);
+  function blockSub(b){
+    b = normBlock(b); const p = PROTOS[b.proto];
+    if(b.proto==="bolt")    return "one measured hold";
+    if(p.kind==="table")    return `${b.rounds} holds · ${fmtDur(blockLen(b))}`;
+    if(p.kind==="pattern")  return `${[b.inS,b.hiS,b.outS,b.hoS].filter(v=>v>0).map(v=>v%1?v:Math.round(v)).join("·")} · ${fmtDur(blockLen(b))}`;
+    if(p.kind==="reduced")  return `${b.rounds} × ${b.mins} min light`;
+    if(p.kind==="apnea")    return `${b.rounds} rounds · ${b.breaths} breaths`;
+    if(p.kind==="walk")     return `${b.walks} walks · ${fmtDur(b.hold)} holds`;
+    return fmtDur(blockLen(b));
+  }
+
+  /* ---------- quick-start presets ----------
+     Structures taken from the standard literature: freediving CO2/O2 tables,
+     Buteyko control-pause and reduced-breathing work, the Oxygen Advantage
+     BOLT protocol, coherent breathing at ~6 breaths/min, and 4-7-8. */
+  const PRESETS = [
+    {id:"bolt",     name:"Morning BOLT",  blocks:[{proto:"bolt"}]},
+    {id:"firstlock",name:"First lock",    blocks:[{proto:"box", mins:5, inS:4, hiS:4, outS:4, hoS:4}]},
+    {id:"co2",      name:"CO₂ table",blocks:[{proto:"co2", rounds:8, hold:45, rest:120, restStep:15, lungs:"empty"}]},
+    {id:"o2",       name:"O₂ table", blocks:[{proto:"o2", rounds:8, base:40, holdStep:10, rest:120, lungs:"full"}]},
+    {id:"ladder",   name:"Pressure ladder",blocks:[{proto:"pyramid", rounds:7, base:30, holdStep:15, rest:90, lungs:"empty"}]},
+    {id:"box6",     name:"Box six",       blocks:[{proto:"box", mins:8, inS:6, hiS:6, outS:6, hoS:6}]},
+    {id:"coherent", name:"Coherent 5.5",  blocks:[{proto:"coherent", mins:10, inS:5.5, outS:5.5}]},
+    {id:"p478",     name:"4-7-8",         blocks:[{proto:"p478", cycles:8}]},
+    {id:"downshift",name:"Down-shift",    blocks:[{proto:"exhale", mins:6, inS:4, outS:8, hoS:2}]},
+    {id:"hunger",   name:"Air hunger",    blocks:[{proto:"reduced", rounds:4, mins:2, inS:3, outS:4, hoS:3}]},
+    {id:"walk",     name:"Apnea walk",    blocks:[{proto:"walk", walks:6, hold:30, rest:60}]},
+    {id:"power",    name:"Power breathing",blocks:[{proto:"apnea", rounds:3, breaths:30, hold:0, recover:15}]},
+    {id:"deep",     name:"Deep dive",     blocks:[{proto:"co2", rounds:10, hold:60, rest:120, restStep:10, lungs:"empty"}]},
+    {id:"winddown", name:"Wind down",     blocks:[{proto:"coherent", mins:5, inS:5.5, outS:5.5},{proto:"p478", cycles:6}]},
+    {id:"reset",    name:"Ninety seconds",blocks:[{proto:"exhale", mins:2, inS:3, outS:6, hoS:0}]},
+    {id:"fullhouse",name:"Full house",    blocks:[{proto:"bolt"},{proto:"co2", rounds:8, hold:45, rest:120, restStep:15, lungs:"empty"},{proto:"coherent", mins:4, inS:5.5, outS:5.5}]}
+  ];
+
+  /* ---------- themes ----------
+     Nine colours each: the four breath phases plus the chassis. Everything
+     else in the app is mixed from these at run time. */
+  const THEMES = {
+    airlock:  {label:"Airlock",      v:{canvas:"#080c0f",canvas2:"#101820",in:"#2fb6d9",out:"#3f8f78",hold:"#e8a33c",empty:"#c8503f",tape:"#e8f1f4",steel:"#6d8592",line:"#1c2b35",fx:"1"}},
+    vacuum:   {label:"Vacuum",       v:{canvas:"#000000",canvas2:"#0b0b0c",in:"#d8dde0",out:"#8f979b",hold:"#ffffff",empty:"#7a7f82",tape:"#f2f4f5",steel:"#63696d",line:"#1a1c1e"}},
+    bluehole: {label:"Blue hole",    v:{canvas:"#03131c",canvas2:"#08222e",in:"#33d6f0",out:"#1d8ba6",hold:"#7ff3d8",empty:"#0a5570",tape:"#dff5fa",steel:"#5b8ea1",line:"#0e3346"}},
+    mariana:  {label:"Mariana",      v:{canvas:"#01080f",canvas2:"#061420",in:"#1f6f9e",out:"#124f70",hold:"#4fd6c0",empty:"#8b2f4a",tape:"#cfe3ee",steel:"#4a6d80",line:"#0a2130"}},
+    apollo:   {label:"Apollo",       v:{canvas:"#0a0d12",canvas2:"#141a22",in:"#4a8fd4",out:"#c8ccd4",hold:"#f4842d",empty:"#c0392b",tape:"#f5f7fa",steel:"#7c8899",line:"#1e2833"}},
+    soyuz:    {label:"Soyuz",        v:{canvas:"#0c0f0b",canvas2:"#161c14",in:"#7fae5c",out:"#4d7a45",hold:"#e6c14a",empty:"#c0392b",tape:"#eef2e6",steel:"#7d8a70",line:"#232c1e",fx:"1"}},
+    nautilus: {label:"Nautilus",     v:{canvas:"#0c0a07",canvas2:"#17130d",in:"#4fb3a3",out:"#2e7d70",hold:"#d9a441",empty:"#a35a2a",tape:"#f2e9d8",steel:"#8a7a5f",line:"#2a2318"}},
+    aurora:   {label:"Aurora",       v:{canvas:"#060a12",canvas2:"#0d1420",in:"#5ef2b0",out:"#2f9d8a",hold:"#b98cff",empty:"#ff6b9d",tape:"#e9f2ff",steel:"#66798f",line:"#152033"}},
+    nitrox:   {label:"Nitrox",       v:{canvas:"#0a0c08",canvas2:"#131810",in:"#8ee34a",out:"#4f9130",hold:"#ffe14d",empty:"#e8622a",tape:"#f0f6e8",steel:"#7f8d70",line:"#1e2618",fx:"1"}},
+    kelp:     {label:"Kelp",         v:{canvas:"#080d0a",canvas2:"#0f1712",in:"#67b98e",out:"#3d7a5a",hold:"#c9d96b",empty:"#a2603a",tape:"#e6f0e9",steel:"#6b8375",line:"#16221b"}},
+    dawn:     {label:"Dawn",         v:{canvas:"#100c10",canvas2:"#1c151b",in:"#ffb27a",out:"#c9748c",hold:"#ffd98a",empty:"#8e4f6a",tape:"#fbeee6",steel:"#96788a",line:"#2b1f29"}},
+    moonlight:{label:"Moonlight",    v:{canvas:"#07080f",canvas2:"#0e1120",in:"#8fa4ff",out:"#5566b5",hold:"#cfd6ff",empty:"#4a3f7a",tape:"#e7eaf7",steel:"#6a7093",line:"#171c33"}},
+    ember:    {label:"Ember",        v:{canvas:"#0d0806",canvas2:"#1a100c",in:"#ff9a52",out:"#b4522a",hold:"#ffcf6b",empty:"#8c2318",tape:"#f8ece2",steel:"#8b7263",line:"#281812"}},
+    hyperbar: {label:"Hyperbaric",   v:{canvas:"#06090b",canvas2:"#0f1519",in:"#00e5ff",out:"#0091a7",hold:"#f5f749",empty:"#ff3b30",tape:"#e4f6fa",steel:"#5c7a85",line:"#122228",fx:"1"}},
+    daylight: {label:"Daylight",     v:{canvas:"#e9ecef",canvas2:"#f7f9fa",in:"#1d7fa8",out:"#2f7a63",hold:"#b26a08",empty:"#a63a2c",tape:"#12181c",steel:"#5c6b74",line:"#c9d2d8"}}
+  };
+  function applyTheme(id){
+    const t = THEMES[id] || THEMES.airlock, r = document.documentElement.style;
+    r.setProperty("--canvas", t.v.canvas);   r.setProperty("--canvas-2", t.v.canvas2);
+    r.setProperty("--in", t.v.in);           r.setProperty("--out", t.v.out);
+    r.setProperty("--hold", t.v.hold);       r.setProperty("--empty", t.v.empty);
+    r.setProperty("--tape", t.v.tape);       r.setProperty("--steel", t.v.steel);
+    r.setProperty("--line", t.v.line);       r.setProperty("--hud-fx", t.v.fx || "0");
+    const m = document.querySelector('meta[name=theme-color]'); if(m) m.setAttribute("content", t.v.canvas);
+  }
+
+  /* ---------- config ----------
+     A cold open lands on a five-minute box: the gentlest thing here, and the
+     one protocol nobody needs a warning for. */
+  const DEFAULTS = {
+    mode:"single",
+    block:{proto:"box", mins:5, inS:4, hiS:4, outS:4, hoS:4},
+    seq:[{proto:"coherent", mins:5, inS:5.5, outS:5.5},{proto:"co2", rounds:8, hold:45, rest:120, restStep:15, lungs:"empty"}],
+    prep:10,
+    voice:"device", chatter:"normal", speed:1,
+    chime:"soft", guideTone:false, countIn:true,
+    vibrateOn:true, playInSilent:true, wakeOn:true,
+    scaleToBolt:true,
+    theme:"airlock",
+    mine:[]
+  };
+  function loadCfg(){
+    let c = JSON.parse(JSON.stringify(DEFAULTS));
+    try{ const raw = store.get("airlock.cfg"); if(raw) c = Object.assign(c, JSON.parse(raw)); }catch(e){}
+    c.block = normBlock(c.block);
+    c.seq = (Array.isArray(c.seq) && c.seq.length ? c.seq : DEFAULTS.seq).map(normBlock);
+    if(!Array.isArray(c.mine)) c.mine = [];
+    if(!THEMES[c.theme]) c.theme = "airlock";
+    c.prep = clamp(Math.round((+c.prep||0)/5)*5, 0, 60);
+    c.speed = (typeof c.speed==="number" && c.speed>0) ? clamp(c.speed, .7, 1.35) : 1;
+    return c;
+  }
+  let cfg = loadCfg();
+  applyTheme(cfg.theme);
+  function save(){ try{ store.set("airlock.cfg", JSON.stringify(cfg)); }catch(e){} }
+  save();
+
+  /* ---------- record: sessions, holds, streaks, BOLT history ---------- */
+  function freshStats(){
+    return {sessions:0, rounds:0, holdSecs:0, sessionSecs:0, streak:0, best:0, lastDay:null,
+            history:[], bolt:[], goal:3, plan:{idx:0}, badges:[],
+            totals:{holds:0, breaths:0, longestHold:0}, bests:{}};
+  }
+  function loadStats(){
+    try{ const r = store.get("airlock.stats"); if(r) return Object.assign(freshStats(), JSON.parse(r)); }catch(e){}
+    return freshStats();
+  }
+  let stats = loadStats();
+  function saveStats(){ try{ store.set("airlock.stats", JSON.stringify(stats)); }catch(e){} }
+  const dayKey = d => `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+
+  const latestBolt = () => (stats.bolt && stats.bolt.length) ? stats.bolt[0] : null;
+  const boltSecs   = () => { const b = latestBolt(); return b ? b.secs : null; };
+  /* Bands from the Oxygen Advantage BOLT guidance: under 10 is very reactive
+     breathing, 40 is the target for an athlete. */
+  const BOLT_BANDS = [
+    {max:10, name:"Very low",  note:"Breathing is fast and reactive. Start with coherent breathing and short boxes — no tables yet."},
+    {max:20, name:"Low",       note:"Common starting point. Reduced breathing and short CO₂ tables will move this fastest."},
+    {max:30, name:"Moderate",  note:"Solid. CO₂ tables at your score, four or five sessions a week, and it keeps climbing."},
+    {max:40, name:"Good",      note:"Comfortable nasal breathing at rest and under light load. Push the tables and add apnea walks."},
+    {max:999,name:"Excellent", note:"Athlete range. Hold it with maintenance work rather than chasing a bigger number."}
+  ];
+  const boltBand = s => BOLT_BANDS.find(b=>s<b.max) || BOLT_BANDS[BOLT_BANDS.length-1];
+
+  /* Scale a block's holds and recoveries from the measured BOLT score. The
+     ratios are deliberately conservative: a CO₂-table hold sits AT your score
+     (a hold you can already do comfortably), and all the training pressure
+     comes from the shrinking recovery rather than from a longer hold. */
+  function scaled(b){
+    b = normBlock(b);
+    const s = boltSecs();
+    if(!cfg.scaleToBolt || !s) return b;
+    const q = v => clamp(Math.round(v/5)*5, 5, 300);
+    if(b.proto==="co2"){      b.hold = q(s*0.9);  b.rest = q(clamp(s*2.4, 60, 150)); b.restStep = q(clamp(s*0.3, 5, 25)); }
+    else if(b.proto==="o2"){  b.base = q(s*0.8);  b.holdStep = q(clamp(s*0.25, 5, 25)); b.rest = q(clamp(s*3, 90, 180)); }
+    else if(b.proto==="pyramid"){ b.base = q(s*0.6); b.holdStep = q(clamp(s*0.35, 5, 25)); b.rest = q(clamp(s*2.2, 60, 120)); }
+    else if(b.proto==="walk"){ b.hold = q(clamp(s*0.7, 10, 90)); }
+    else if(b.proto==="reduced"){ b.hoS = clamp(Math.round(s*0.25*2)/2, 1, 12); }
+    return b;
+  }
+  const blocksNow = () => (cfg.mode==="sequence" ? cfg.seq : [cfg.block]).map(scaled);
+
+  /* ---------- coaching lines ----------
+     Short, spoken and shown. Hold lines are picked by how deep into the hold
+     you are, because "nothing to do but wait" is the wrong thing to hear in
+     the last ten seconds and the right thing to hear in the first ten. */
+  const LINES = {
+    holdEarly:["Nothing to do but wait.","Soft belly. Loose jaw.","Let the shoulders drop.","Stay still. Stillness is the skill.","Eyes soft. Nothing to fix."],
+    holdMid:  ["The urge is a signal, not an emergency.","Let it build. It is supposed to.","Swallow if you need to. Keep holding.","This is CO₂, not a lack of oxygen.","Loosen the throat."],
+    holdLate: ["This is the part that trains you.","Ride it out.","Stay soft, nearly there.","Hold the calm, not the breath.","Last stretch. Do not fight it."],
+    breathe:  ["Slow and quiet. Nose only.","Do not over-breathe — normal breaths.","Let the exhale fall out on its own.","Shoulders down. Belly doing the work.","Quiet enough that nobody would hear you."],
+    inhale:   ["Through the nose, low into the belly.","Fill slow. No rush at the top.","Chest quiet, ribs wide."],
+    exhale:   ["Long and slow. Empty without forcing.","Let it fall out of you.","Slower than feels necessary."],
+    light:    ["Breathe less than you want.","Small, slow, silent.","Keep the hunger mild and steady.","Barely moving. That is the dose.","If it turns to panic, take a breath and come back."],
+    power:    ["Full in, let it fall out.","Keep the rhythm. Do not force the exhale.","Deep and steady — no faster than the count."],
+    recover:  ["Big breath in. Hold it on top.","Squeeze it in and hold.","Chest full. Hold."],
+    walk:     ["Keep walking. Easy pace.","Steps steady, shoulders loose.","Do not speed up to finish sooner."],
+    test:     ["Wait for the first definite urge, not your limit.","The first swallow or throat twitch — that is it.","Do not push past it. This is a measurement, not a hold."]
+  };
+
+  /* ---------- what the coach says per phase ---------- */
+  const CUE_WORD = {
+    in:"Inhale", holdin:"Hold", out:"Exhale", holdout:"Hold empty",
+    breathe:"Breathe", power:"Breathe deep", prep:"Settle", recover:"Recovery hold"
+  };
+  const CUE_SAY = {
+    in:"Inhale", holdin:"Hold", out:"Exhale", holdout:"Hold empty",
+    breathe:"Breathe", power:"Breathe deep", recover:"Hold on top"
+  };
+
+  /* ---------- audio: session category, haptics, chime, guide tone ---------- */
+  let actx = null;
+  function ensureCtx(){
+    if(actx) return actx;
+    try{ const AC = window.AudioContext || window.webkitAudioContext; if(AC) actx = new AC(); }catch(e){}
+    return actx;
+  }
+  function unlockAudio(){ const c = ensureCtx(); if(c && c.state==="suspended") c.resume().catch(()=>{}); }
+  // iOS Audio Session (Safari 16.4+): "playback" plays THROUGH the mute switch
+  // like a music app; "transient" ducks under music but the mute switch kills
+  // it. Hearing the pacing is the product, so playback is the default.
+  function duckOtherAudio(){
+    try{ if(navigator.audioSession) navigator.audioSession.type = (cfg.playInSilent!==false) ? "playback" : "transient"; }catch(e){}
+  }
+  function buzz(p){ try{ if(cfg.vibrateOn!==false && navigator.vibrate) navigator.vibrate(p); }catch(e){} }
+
+  /* The chime is synthesised, never a file: it has to work on a first load
+     with no network and no voice pack. Each voice is a partial stack with its
+     own decay — soft is a sine pair, bell is brighter and shorter, bowl rings
+     on with an inharmonic partial. `dir` bends the pitch up for an inhale and
+     down for an exhale, so the cue itself tells you which way to go. */
+  const CHIMES = {
+    soft: {parts:[[1,1],[2,.28]],       decay:1.4, base:392, gain:.20, type:"sine"},
+    bell: {parts:[[1,1],[2.76,.4],[5.4,.16]], decay:1.9, base:523, gain:.16, type:"sine"},
+    bowl: {parts:[[1,1],[2.4,.5],[3.9,.22],[6.1,.1]], decay:3.4, base:294, gain:.14, type:"sine"}
+  };
+  function chime(dir, strength){
+    if(cfg.chime==="off") return;
+    const c = ensureCtx(); if(!c) return;
+    if(c.state==="suspended") c.resume().catch(()=>{});
+    const C = CHIMES[cfg.chime] || CHIMES.soft;
+    const t = c.currentTime + 0.01;
+    const bend = dir==="up" ? 1.16 : dir==="down" ? 0.86 : 1;
+    const amp = (strength||1) * C.gain;
+    C.parts.forEach(([mult, lvl])=>{
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = C.type;
+      const f0 = C.base*mult;
+      o.frequency.setValueAtTime(f0, t);
+      if(bend!==1) o.frequency.exponentialRampToValueAtTime(f0*bend, t + Math.min(0.5, C.decay*0.35));
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp*lvl), t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + C.decay);
+      o.connect(g); g.connect(c.destination);
+      o.start(t); o.stop(t + C.decay + 0.05);
+    });
+  }
+  /* A single sustained voice that glides with the breath: up through an
+     inhale, down through an exhale, flat on a hold, silent otherwise. It is
+     the eyes-closed pacer — you can put the phone face down and follow it. */
+  let guideOsc = null, guideGain = null;
+  function guideStart(){
+    if(!cfg.guideTone) return;
+    const c = ensureCtx(); if(!c || guideOsc) return;
+    if(c.state==="suspended") c.resume().catch(()=>{});
+    guideOsc = c.createOscillator(); guideGain = c.createGain();
+    guideOsc.type = "sine"; guideOsc.frequency.value = 196;
+    guideGain.gain.value = 0.0001;
+    guideOsc.connect(guideGain); guideGain.connect(c.destination);
+    guideOsc.start();
+  }
+  function guideStop(){
+    if(!guideOsc) return;
+    const c = ensureCtx(); const t = c ? c.currentTime : 0;
+    try{ guideGain.gain.cancelScheduledValues(t); guideGain.gain.setTargetAtTime(0.0001, t, .08); guideOsc.stop(t+0.6); }catch(e){}
+    guideOsc = null; guideGain = null;
+  }
+  const GUIDE_LO = 174.6, GUIDE_HI = 293.7;   // F3 to D4 — a comfortable minor third of travel
+  function guidePhase(k, secs){
+    if(!cfg.guideTone){ guideStop(); return; }
+    guideStart();
+    const c = ensureCtx(); if(!c || !guideOsc) return;
+    const t = c.currentTime, d = Math.max(0.4, secs||1);
+    const f = guideOsc.frequency, g = guideGain.gain;
+    f.cancelScheduledValues(t); g.cancelScheduledValues(t);
+    const on = (lvl)=>{ g.setValueAtTime(Math.max(0.0001, g.value), t); g.exponentialRampToValueAtTime(Math.max(0.0002, lvl), t+0.25); };
+    if(k==="in"){        f.setValueAtTime(Math.max(50,f.value), t); f.exponentialRampToValueAtTime(GUIDE_HI, t+d); on(.05); }
+    else if(k==="out"){  f.setValueAtTime(Math.max(50,f.value), t); f.exponentialRampToValueAtTime(GUIDE_LO, t+d); on(.05); }
+    else if(k==="holdin"){  f.setValueAtTime(GUIDE_HI, t); on(.028); }
+    else if(k==="holdout"){ f.setValueAtTime(GUIDE_LO, t); on(.028); }
+    else { g.setValueAtTime(Math.max(0.0001,g.value), t); g.exponentialRampToValueAtTime(0.0001, t+0.4); }
+  }
+
+  /* ---------- voice ----------
+     Airlock speaks the same way Coach Fred does: a finite vocabulary of short
+     phrases, each pre-rendered to an MP3 with ElevenLabs (see gen_voice.py and
+     VOICE_PACKS.md) and played back-to-back through Web Audio, so the coach is
+     a recorded human rather than a readout. Because a breathing app is useful
+     on the very first load — before anyone has rendered a pack — the device's
+     own speech engine stands in when no pack is installed, and the synthesised
+     chime paces the session either way. */
+  const TONES = {
+    cue:   {rate:1.0,  vol:1.0},
+    calm:  {rate:0.94, vol:0.92},
+    firm:  {rate:0.99, vol:1.0},
+    urgent:{rate:1.06, vol:1.0},
+    warm:  {rate:0.96, vol:0.96}
+  };
+  const VOICE_PACKS = [
+    {id:"vera", label:"Vera — calm, close"},
+    {id:"sten", label:"Sten — flat, factual"}
+  ];
+  const isPackVal = v => typeof v==="string" && v.startsWith("pack:");
+  const packIdOf  = v => isPackVal(v) ? v.slice(5) : null;
+  // Canonical clip filename for a spoken atom. MUST match gen_voice.py's slug().
+  const slugify = s => String(s).toLowerCase().trim()
+        .replace(/&/g,"and").replace(/['".,!?:;]/g,"")
+        .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+
+  let voicePack = null, voicePackWant = null;
+  const clipBuf = new Map();
+  let clipGen = 0;
+
+  function loadClip(slug){
+    if(clipBuf.has(slug)) return clipBuf.get(slug);
+    const c = ensureCtx(); if(!c || !voicePack) return Promise.reject();
+    const p = fetch(`voice/${voicePack.id}/${slug}.mp3`)
+      .then(r=>{ if(!r.ok) throw new Error("missing "+slug); return r.arrayBuffer(); })
+      .then(buf=> new Promise((res,rej)=> c.decodeAudioData(buf, res, rej)));
+    clipBuf.set(slug, p);
+    p.catch(()=>clipBuf.delete(slug));
+    return p;
+  }
+  function stopClips(){ clipGen++; }
+
+  // Each clip is rendered in isolation, so a lone word can land louder than
+  // its neighbours; strung together that makes one word pop. Measure each
+  // decoded clip once (RMS with a peak ceiling) and cache its gain.
+  const normCache = new WeakMap(), NORM_RMS = 0.075;
+  function normGain(buf){
+    let g = normCache.get(buf); if(g!=null) return g;
+    let sumSq=0, peak=1e-6, n=0;
+    for(let ch=0; ch<buf.numberOfChannels; ch++){
+      const d = buf.getChannelData(ch);
+      for(let i=0;i<d.length;i++){ const v=d[i]; sumSq+=v*v; const a=v<0?-v:v; if(a>peak)peak=a; }
+      n += d.length;
+    }
+    const rms = Math.sqrt(sumSq/Math.max(1,n));
+    g = rms>1e-4 ? NORM_RMS/rms : 1;
+    g = clamp(g, 0.6, 2.2);
+    g = Math.min(g, 0.98/peak);
+    normCache.set(buf, g);
+    return g;
+  }
+  // Pitch-preserving time stretch (WSOLA overlap-add). Setting playbackRate
+  // resamples, so faster also means higher — a helium coach. Re-time by
+  // overlap-adding ~30ms windows picked by waveform similarity instead.
+  const stretchCache = new WeakMap();
+  function timeStretch(c, buf, rate){
+    const sr = buf.sampleRate, chs = buf.numberOfChannels;
+    const W = 2*Math.round(0.030*sr/2), H = W/2, S = Math.round(0.008*sr);
+    const inLen = buf.length;
+    if(inLen <= W*2) return buf;
+    const outLen = Math.max(W, Math.round(inLen/rate));
+    const out = c.createBuffer(chs, outLen, sr);
+    const win = new Float32Array(W);
+    for(let i=0;i<W;i++) win[i] = 0.5 - 0.5*Math.cos(2*Math.PI*i/W);
+    const x0 = buf.getChannelData(0);
+    let prev = -1;
+    for(let o=0; o<outLen; o+=H){
+      let ip = clamp(Math.round(o*rate), 0, inLen-W);
+      if(prev >= 0 && prev+H+W <= inLen){
+        const t = prev+H; let best=0, bs=-Infinity;
+        for(let off=-S; off<=S; off+=2){
+          const cd = ip+off; if(cd<0 || cd+W>inLen) continue;
+          let s2=0; for(let i=0;i<W;i+=4) s2 += x0[t+i]*x0[cd+i];
+          if(s2>bs){ bs=s2; best=off; }
+        }
+        ip += best;
+      }
+      for(let k=0;k<chs;k++){
+        const src=buf.getChannelData(k), dst=out.getChannelData(k);
+        const n = Math.min(W, outLen-o);
+        for(let i=0;i<n;i++) dst[o+i] += src[ip+i]*win[i];
+      }
+      prev = ip;
+    }
+    return out;
+  }
+  function retimed(c, buf, rate){
+    const key = Math.round(rate*50);
+    if(key === 50) return buf;
+    let m = stretchCache.get(buf); if(!m){ m = new Map(); stretchCache.set(buf, m); }
+    let sb = m.get(key);
+    if(!sb){ sb = timeStretch(c, buf, key/50); m.set(key, sb); }
+    return sb;
+  }
+  // Rendered clips carry 50–150ms of lead-in/out silence; stacked, that makes
+  // a sentence sound like a row of separate takes. Measure the voiced region
+  // once per decoded buffer and play just that.
+  const trimCache = new WeakMap(), TRIM_AMP = 0.02;
+  function trimBounds(buf){
+    let t = trimCache.get(buf); if(t) return t;
+    const d = buf.getChannelData(0), n = d.length;
+    let a=0, b=n-1;
+    while(a<n && Math.abs(d[a])<TRIM_AMP) a++;
+    while(b>a && Math.abs(d[b])<TRIM_AMP) b--;
+    const sr = buf.sampleRate;
+    const off = Math.max(0, a/sr - 0.015);
+    const dur = Math.min(buf.duration - off, (b-a)/sr + 0.045);
+    t = {off, dur: Math.max(0.05, dur)};
+    trimCache.set(buf, t);
+    return t;
+  }
+  // Voice pack revision — bump when clips are re-rendered. The service worker
+  // serves voice clips cache-first and carries them across app upgrades, so a
+  // re-rendered clip would otherwise play one stale take first.
+  const VOICE_REV = "2026-08-28a";
+  const voiceFresh = (()=>{
+    try{
+      if(typeof caches==="undefined" || store.get("airlock.voiceRev")===VOICE_REV) return Promise.resolve();
+      return caches.keys().then(keys=>Promise.all(keys.map(k=>caches.open(k).then(async c=>{
+        for(const req of await c.keys()) if(req.url.includes("/voice/")) await c.delete(req);
+      })))).then(()=>{ store.set("airlock.voiceRev", VOICE_REV); }).catch(()=>{});
+    }catch(e){ return Promise.resolve(); }
+  })();
+  function applyVoicePack(){
+    const id = packIdOf(cfg.voice);
+    if(!id){ voicePackWant = null; voicePack = null; return; }
+    if(voicePackWant === id) return;
+    voicePackWant = id;
+    voicePack = {id, slugs:new Set(), hi:new Set()};
+    voiceFresh.then(()=>
+    fetch(`voice/${id}/manifest.json`).then(r=>{ if(!r.ok) throw 0; return r.json(); })
+      .then(m=>{
+        if(voicePackWant !== id) return;
+        voicePack = {id, slugs:new Set(m.slugs||[]), hi:new Set()};
+        fetch(`voice/${id}/pitch.json`).then(r=>r.ok?r.json():null).then(p=>{
+          if(p && voicePackWant===id && voicePack && voicePack.id===id) voicePack.hi = new Set(p.avoid||[]);
+        }).catch(()=>{});
+        (m.slugs||[]).forEach(s=>{ try{ loadClip(s); }catch(e){} });
+      })
+      .catch(()=>{ if(voicePackWant === id){ voicePack=null; voicePackWant=null;
+        setTimeout(()=>{ if(!voicePack && packIdOf(cfg.voice)===id) applyVoicePack(); }, 4000); } }));
+  }
+  function playClipSeq(slugs, tone, onend){
+    let ended = false;
+    const finish = ()=>{ if(ended) return; ended = true; if(onend) onend(); };
+    const c = ensureCtx(); if(!c || !slugs.length){ finish(); return; }
+    if(c.state==="suspended") c.resume().catch(()=>{});
+    const gen = ++clipGen;
+    const t = TONES[tone] || TONES.cue;
+    const rate = clamp((cfg.speed||1) * (t.rate||1), 0.65, 1.45);
+    Promise.all(slugs.map(loadClip)).then(bufs=>{
+      if(gen!==clipGen){ finish(); return; }
+      const g = c.createGain(); g.gain.value = (t.vol!=null?t.vol:1); g.connect(c.destination);
+      let when = c.currentTime + 0.03, last = null;
+      bufs.forEach(b=>{
+        b = retimed(c, b, rate);
+        const s = c.createBufferSource(); s.buffer = b;
+        const cg = c.createGain();
+        cg.gain.setValueAtTime(0.0001, when);
+        cg.gain.linearRampToValueAtTime(normGain(b), when + 0.008);
+        s.connect(cg); cg.connect(g);
+        const tb = trimBounds(b);
+        s.start(when, tb.off, tb.dur);
+        when += tb.dur + 0.06; last = s;
+      });
+      if(last) last.onended = finish; else finish();
+    }).catch(finish);
+  }
+
+  /* Device speech — the stand-in until a recorded pack is installed, and the
+     only thing that can voice a line no pack covers. */
+  let ttsVoice = null, ttsReady = false;
+  function pickTtsVoice(){
+    if(!("speechSynthesis" in window)) return;
+    const all = speechSynthesis.getVoices() || [];
+    if(!all.length) return;
+    const en = all.filter(v=>/^en([-_]|$)/i.test(v.lang||""));
+    const pool = en.length ? en : all;
+    ttsVoice = pool.find(v=>/samantha|serena|karen|daniel|google uk|google us|natural|neural/i.test(v.name))
+            || pool.find(v=>v.default) || pool[0];
+    ttsReady = true;
+  }
+  if("speechSynthesis" in window){
+    pickTtsVoice();
+    speechSynthesis.addEventListener("voiceschanged", pickTtsVoice);
+  }
+  function ttsSay(text, tone, onend){
+    if(!("speechSynthesis" in window) || !text){ if(onend) onend(); return; }
+    if(!ttsReady) pickTtsVoice();
+    try{
+      const u = new SpeechSynthesisUtterance(text);
+      const t = TONES[tone] || TONES.cue;
+      if(ttsVoice) u.voice = ttsVoice;
+      u.rate = clamp((cfg.speed||1) * (t.rate||1) * 0.95, 0.5, 2);
+      u.pitch = tone==="calm" ? 0.94 : 1;
+      u.volume = t.vol!=null ? t.vol : 1;
+      if(onend){ u.onend = onend; u.onerror = onend; }
+      speechSynthesis.speak(u);
+    }catch(e){ if(onend) onend(); }
+  }
+  function cancelSpeech(){
+    stopClips();
+    try{ if("speechSynthesis" in window) speechSynthesis.cancel(); }catch(e){}
+  }
+  /* Say a line. It is written as ". "-joined clauses, and with a recorded pack
+     each clause is one clip. Anything the pack does not carry — and anything
+     gen_pitch.py flagged as an out-of-register take — falls through to the
+     device voice: half a line, or a squeaked "hold", is worse than a plainer
+     voice saying the whole thing. With no device voice to fall back on, the
+     clips it does have still beat silence. */
+  function say(text, tone){
+    if(cfg.voice==="off" || !text) return;
+    if(!voicePack && isPackVal(cfg.voice)) applyVoicePack();
+    if(voicePack){
+      const atoms = String(text).split(". ").map(s=>s.replace(/\.\s*$/,"").trim()).filter(Boolean);
+      const slugs = atoms.map(slugify);
+      const have = slugs.filter(s=>voicePack.slugs.has(s));
+      const flagged = slugs.some(s=>voicePack.hi.has(s));
+      if(have.length===atoms.length && !flagged){ playClipSeq(have, tone); return; }
+      if(have.length && !("speechSynthesis" in window)){ playClipSeq(have, tone); return; }
+    }
+    ttsSay(String(text), tone);
+  }
+  function loadVoices(){
+    const sel = document.getElementById("sVoice");
+    if(sel){
+      sel.innerHTML = "";
+      const add = (v,l)=>{ const o=document.createElement("option"); o.value=v; o.textContent=l; sel.appendChild(o); };
+      VOICE_PACKS.forEach(p=>add("pack:"+p.id, p.label + " — recorded"));
+      add("device", "Device voice" + (("speechSynthesis" in window) ? "" : " — unavailable here"));
+      add("off", "Tones only");
+      if(!["device","off"].includes(cfg.voice) && !VOICE_PACKS.some(p=>("pack:"+p.id)===cfg.voice)) cfg.voice = "device";
+      sel.value = cfg.voice;
+    }
+    applyVoicePack();
+  }
+  duckOtherAudio();
+
+  /* ---------- elements ---------- */
+  const $ = id => document.getElementById(id);
+  const app=$("app"), clockEl=$("clock"), cueEl=$("cue"), subEl=$("subLine"), stateLabel=$("stateLabel");
+  const coachEl=$("coachLine"), idleHint=$("idleHint"), chamber=$("chamber"), iris=$("iris"), ring=$("ring");
+  const startBtn=$("startBtn"), resetBtn=$("resetBtn"), skipBtn=$("skipBtn"), releaseBtn=$("releaseBtn");
+  const roundNow=$("roundNow"), roundTotal=$("roundTotal"), dotsEl=$("dots"), sheet=$("sheet"), hudProto=$("hudProto");
+
+  /* ---------- chamber chrome (drawn once) ---------- */
+  (function drawChrome(){
+    const collar = $("collar"), blades = $("blades");
+    let s = "";
+    for(let i=0;i<48;i++){
+      const a = (i/48)*Math.PI*2 - Math.PI/2, maj = i%4===0;
+      const r1 = maj ? 88 : 91, r2 = 95;
+      s += `<line class="tickmark${maj?" maj":""}" x1="${(100+Math.cos(a)*r1).toFixed(2)}" y1="${(100+Math.sin(a)*r1).toFixed(2)}" x2="${(100+Math.cos(a)*r2).toFixed(2)}" y2="${(100+Math.sin(a)*r2).toFixed(2)}"/>`;
+    }
+    collar.innerHTML = s;
+    // six iris blades, drawn as chords across the core
+    let b = "";
+    for(let i=0;i<6;i++){
+      const a = (i/6)*Math.PI*2;
+      const x1 = 100+Math.cos(a)*62, y1 = 100+Math.sin(a)*62;
+      const a2 = a + Math.PI*2/6;
+      const x2 = 100+Math.cos(a2)*62, y2 = 100+Math.sin(a2)*62;
+      b += `<path class="iris-blade" d="M${x1.toFixed(1)},${y1.toFixed(1)} Q${(100+Math.cos(a+Math.PI/6)*30).toFixed(1)},${(100+Math.sin(a+Math.PI/6)*30).toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}"/>`;
+    }
+    blades.innerHTML = b;
+  })();
+  const RING_C = 2*Math.PI*86;
+  ring.style.strokeDasharray = RING_C.toFixed(2);
+  ring.style.strokeDashoffset = String(RING_C);
+
+  const EASE = "cubic-bezier(.37,0,.63,1)";                 // sinusoidal — how a breath actually moves
+  function setIris(scale, secs, ease){
+    iris.style.transition = secs>0 ? `transform ${secs}s ${ease||EASE}` : "none";
+    iris.style.transform = `scale(${scale})`;
+  }
+  function setRing(secs, from, to){
+    ring.style.transition = "none";
+    ring.style.strokeDashoffset = String(RING_C*(1-from));
+    void ring.getBoundingClientRect();                      // commit before re-arming
+    ring.style.transition = secs>0 ? `stroke-dashoffset ${secs}s linear` : "none";
+    ring.style.strokeDashoffset = String(RING_C*(1-to));
+  }
+  function freezeAnim(){
+    const off = getComputedStyle(ring).strokeDashoffset;
+    ring.style.transition = "none"; ring.style.strokeDashoffset = off;
+    const tr = getComputedStyle(iris).transform;
+    iris.style.transition = "none"; if(tr && tr!=="none") iris.style.transform = tr;
+  }
+
+  /* ---------- engine state ---------- */
+  let schedule = [], segIndex = 0, phase = "idle";
+  let endAt = 0, pausedRemaining = 0, running = false, tickId = null;
+  let curSeg = null, totalRounds = 0;
+  let cdNext = 0, coachQueue = [], openStart = 0, powerTimer = null, powerN = 0;
+  let wakeLock = null;
+  let tally = null;              // what this session actually did
+  let pendingBolt = null;        // a measured hold waiting to be saved
+
+  /* ---------- schedule ----------
+     Blocks are flattened into one segment list. Rounds are renumbered across
+     the whole session so a sequence of three blocks still reads 1..N in the
+     header and gets one dot per round. */
+  function buildSchedule(){
+    const segs = [];
+    if(cfg.prep>0) segs.push({k:"prep", secs:cfg.prep, lbl:"Get ready"});
+    const blocks = blocksNow();
+    let gr = 0, lastKey = null;
+    blocks.forEach((b, bi)=>{
+      const made = PROTOS[b.proto].make(b);
+      made.forEach(s=>{
+        const key = bi+"/"+(s.r||1);
+        if(key !== lastKey){ gr++; lastKey = key; }
+        segs.push(Object.assign({}, s, {gr, proto:b.proto, block:bi, blocks:blocks.length}));
+      });
+    });
+    schedule = segs;
+    totalRounds = gr;
+    return segs;
+  }
+  // Pure: never touches engine state, so the idle screen can call it freely.
+  const sessionSecs = () => (cfg.prep>0?cfg.prep:0) + blocksNow().reduce((a,b)=>a+blockLen(b), 0);
+
+  /* Rounds mean different things per protocol: a table has eight holds, a
+     ten-minute box has seventy-odd breath cycles. The header word follows,
+     and past a dozen the dot row stops being readable so it goes away. */
+  function roundWord(){
+    const byRound = new Map();
+    schedule.forEach(s=>{ if(s.k!=="prep" && s.gr) byRound.set(s.gr, PROTOS[s.proto] && PROTOS[s.proto].kind); });
+    if(!byRound.size) return "RND";
+    let pat = 0; byRound.forEach(k=>{ if(k==="pattern") pat++; });
+    return pat*2 > byRound.size ? "CYC" : "RND";
+  }
+  function paintDots(){
+    document.querySelector(".round-tag .rl").textContent = roundWord();
+    if(totalRounds > 12){ dotsEl.style.display="none"; return; }
+    dotsEl.style.display = "flex";
+    let html = "";
+    const cur = curSeg ? curSeg.gr : 0;
+    for(let i=1;i<=totalRounds;i++)
+      html += `<div class="dot${i<cur?" done":(i===cur&&phase!=="idle"&&phase!=="done"?" current":"")}"></div>`;
+    dotsEl.innerHTML = html;
+  }
+
+  /* ---------- coaching ---------- */
+  const chatterLevel = () => ({full:3, normal:2, sparse:1, silent:0})[cfg.chatter] ?? 2;
+  function poolFor(seg, frac){
+    const k = seg.k;
+    if(seg.test) return LINES.test;
+    if(k==="holdin"||k==="holdout"){
+      if(seg.walk) return LINES.walk;
+      if(seg.lbl==="Recovery hold") return LINES.recover;
+      return frac<0.34 ? LINES.holdEarly : frac<0.7 ? LINES.holdMid : LINES.holdLate;
+    }
+    if(k==="power") return LINES.power;
+    if(k==="breathe") return seg.walk ? LINES.walk : LINES.breathe;
+    if(k==="in")  return LINES.inhale;
+    if(k==="out") return LINES.exhale;
+    return LINES.breathe;
+  }
+  function showCoach(txt, speakIt){
+    coachEl.textContent = txt || "";
+    if(txt && speakIt && chatterLevel()>0) say(txt, "calm");
+  }
+  /* Which coaching lines this segment gets, and when. Long phases earn more
+     than one; a four-second inhale earns none. */
+  function planCoach(seg){
+    const out = [], lvl = chatterLevel(), s = seg.open ? 90 : seg.secs;
+    if(lvl===0 || s < 12) return out;
+    const isLight = seg.proto==="reduced" && (seg.k==="in"||seg.k==="out"||seg.k==="holdout");
+    if(isLight) return out;
+    if(lvl>=3){ out.push({at:s*0.28}); if(s>=30) out.push({at:s*0.62}); if(s>=70) out.push({at:s*0.85}); }
+    else if(lvl===2){ if(s>=18) out.push({at:s*0.42}); if(s>=60) out.push({at:s*0.78}); }
+    return out;
+  }
+
+  /* ---------- wake lock ---------- */
+  async function acquireWake(){
+    if(cfg.wakeOn===false) return;
+    try{ if("wakeLock" in navigator && !wakeLock) wakeLock = await navigator.wakeLock.request("screen"); }catch(e){}
+  }
+  function releaseWake(){ try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){} }
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && running) acquireWake(); });
+
+  /* ---------- power-breath pacer ---------- */
+  function startPower(seg){
+    stopPower();
+    powerN = 0;
+    const per = 2.2;
+    iris.classList.add("fast");
+    const beat = ()=>{
+      powerN++;
+      setIris(1.0, per*0.45, "ease-out");
+      setTimeout(()=>{ if(powerTimer) setIris(0.42, per*0.5, "ease-in"); }, per*450);
+      subEl.textContent = `breath ${Math.min(powerN, seg.breaths)} / ${seg.breaths}`;
+      if(cfg.chime!=="off" && powerN%5===0) chime("up", .35);
+    };
+    beat();
+    powerTimer = setInterval(beat, per*1000);
+  }
+  function stopPower(){ if(powerTimer){ clearInterval(powerTimer); powerTimer=null; } iris.classList.remove("fast"); }
+
+  /* ---------- segment lifecycle ---------- */
+  function loadSegment(i){
+    const seg = schedule[i];
+    if(!seg){ finish(); return; }
+    curSeg = seg; phase = seg.k;
+    stopPower();
+    iris.classList.toggle("free", seg.k==="breathe");
+    app.className = seg.k;
+    skipBtn.disabled = false;
+    idleHint.style.display = "none";
+    cdNext = 0; coachQueue = planCoach(seg);
+    releaseBtn.classList.toggle("on", !!seg.open);
+    releaseBtn.textContent = seg.test ? "Tap on first urge" : "Release";
+
+    // header + labels
+    hudProto.textContent = (PROTOS[seg.proto] && PROTOS[seg.proto].tag) || "STANDBY";
+    roundNow.textContent = pad2(seg.gr||0); roundTotal.textContent = pad2(totalRounds);
+    // The state label says what is running; the cue says what to do right now.
+    // On a pattern atom there is no block label, so the protocol name stands in
+    // rather than echoing the cue back at you in two sizes.
+    const P = PROTOS[seg.proto];
+    stateLabel.textContent = seg.lbl || (P && P.kind==="pattern" ? P.label : CUE_WORD[seg.k]) || "Ready";
+    cueEl.textContent = CUE_WORD[seg.k] || "";
+    coachEl.textContent = "";     // advice for the phase just gone is worse than none
+    cueEl.classList.remove("pulse"); void cueEl.offsetWidth; cueEl.classList.add("pulse");
+    subEl.textContent = subFor(seg);
+    paintDots();
+
+    // motion
+    const d = seg.open ? 0 : seg.secs;
+    if(seg.k==="in"){        setIris(1.0, d, EASE); }
+    else if(seg.k==="out"){  setIris(0.40, d, EASE); }
+    else if(seg.k==="holdin"){  setIris(1.0, Math.min(0.5, d), "ease-out"); }
+    else if(seg.k==="holdout"){ setIris(0.40, Math.min(0.5, d), "ease-out"); }
+    else if(seg.k==="power"){ /* the pacer drives it */ }
+    else { setIris(0.62, 1.2, "ease-in-out"); }
+    setRing(seg.open ? 120 : seg.secs, 0, 1);
+
+    // sound + haptics
+    chime(seg.k==="in"||seg.k==="power" ? "up" : seg.k==="out" ? "down" : "flat", seg.k==="prep" ? .6 : 1);
+    guidePhase(seg.k, seg.secs);
+    buzz(seg.k==="holdout"||seg.k==="holdin" ? [140] : [60]);
+    if(seg.k==="power") startPower(seg);
+
+    // speech
+    speakSegment(seg);
+
+    // timing
+    if(seg.open){ openStart = Date.now(); endAt = 0; clockEl.textContent = "00:00"; }
+    else { endAt = Date.now() + seg.secs*1000;
+           cdNext = (cfg.countIn!==false && chatterLevel()>0 && seg.secs>=12) ? 5 : 0;
+           clockEl.textContent = fmt(seg.secs); }
+    if(!seg.open && seg.secs>0) tallyPhase(seg);
+  }
+  function subFor(seg){
+    if(seg.open) return seg.test ? "counting up" : "tap to release";
+    if(seg.cycN) return `breath ${seg.cyc} / ${seg.cycN}`;
+    if(seg.k==="power") return `${seg.breaths} breaths`;
+    const p = PROTOS[seg.proto];
+    if(p && (p.kind==="table")) return `hold ${seg.r} of ${schedule.filter(s=>s.block===seg.block && (s.k==="holdin"||s.k==="holdout")).length}`;
+    if(seg.gr && totalRounds>1) return `round ${seg.gr} of ${totalRounds}`;
+    return "";
+  }
+  function speakSegment(seg){
+    if(chatterLevel()===0) return;
+    let line = "";
+    // A table announces the round on the breathe-up so you know what is coming.
+    const isTable = PROTOS[seg.proto] && PROTOS[seg.proto].kind==="table";
+    if(isTable && seg.k==="breathe"){
+      const last = seg.gr===totalRounds;
+      line = (last ? "Final round" : `Round ${seg.gr}`) + ". Breathe up";
+    } else if(seg.k==="prep"){ line = "Get ready. Sit comfortably";
+    } else if(seg.say){ line = seg.say;
+    } else if(seg.lbl==="Recovery hold"){ line = "Big breath in. Hold";
+    } else if(seg.walk && seg.k==="holdout"){ line = "Breathe out. Hold and keep walking";
+    } else if(seg.proto==="reduced" && seg.k==="in" && seg.cyc===1){ line = "Breathe light";
+    } else { line = CUE_SAY[seg.k] || ""; }
+    // On a fast pattern the phase cue is the whole point; on a slow one it is
+    // still short enough not to run into the phase it announces.
+    if(line) say(line, seg.k==="holdout"||seg.k==="holdin" ? "firm" : "cue");
+  }
+  function tallyPhase(seg){
+    if(!tally) return;
+    if(seg.k==="holdin"||seg.k==="holdout"){ tally.holds++; tally.holdSecs += seg.secs; tally.longest = Math.max(tally.longest, seg.secs); }
+    if(seg.k==="in") tally.breaths++;
+    if(seg.k==="power") tally.breaths += seg.breaths||0;
+  }
+
+  function advance(){ segIndex++; if(segIndex>=schedule.length) finish(); else loadSegment(segIndex); }
+
+  function tick(){
+    const seg = curSeg; if(!seg) return;
+    if(seg.open){
+      const el = (Date.now()-openStart)/1000;
+      clockEl.textContent = fmt(el);
+      const q = coachQueue[0];
+      if(q && el>=q.at){ coachQueue.shift(); showCoach(pick(poolFor(seg, el/90)), chatterLevel()>=2); }
+      return;
+    }
+    const remaining = Math.max(0, endAt-Date.now());
+    const secs = remaining/1000, el = seg.secs - secs;
+    clockEl.textContent = fmt(Math.ceil(secs));
+    const q = coachQueue[0];
+    if(q && el>=q.at){ coachQueue.shift(); showCoach(pick(poolFor(seg, el/seg.secs)), chatterLevel()>=2); }
+    if(cdNext>0 && secs<=cdNext+0.05){ say(String(cdNext), "firm"); cdNext--; }
+    if(remaining<=0) advance();
+  }
+  function run(){
+    running = true; startBtn.textContent = "Pause"; acquireWake();
+    if(tickId) clearInterval(tickId);
+    tickId = setInterval(tick, 100);
+  }
+  function pauseSession(){
+    running = false; startBtn.textContent = "Resume";
+    // On an open hold there is no deadline to bank — keep the elapsed time.
+    pausedRemaining = (curSeg && curSeg.open) ? (Date.now()-openStart) : Math.max(0, endAt-Date.now());
+    clearInterval(tickId); tickId = null;
+    cancelSpeech(); stopPower(); guideStop(); freezeAnim(); releaseWake();
+  }
+  function resumeSession(){
+    if(curSeg && curSeg.open){ openStart = Date.now() - pausedRemaining; }
+    else {
+      endAt = Date.now() + pausedRemaining;
+      const frac = curSeg ? 1 - pausedRemaining/1000/curSeg.secs : 0;
+      const left = pausedRemaining/1000;
+      setRing(left, frac, 1);
+      if(curSeg){
+        if(curSeg.k==="in")  setIris(1.0, left, EASE);
+        if(curSeg.k==="out") setIris(0.40, left, EASE);
+      }
+      guidePhase(curSeg ? curSeg.k : "", left);
+    }
+    if(curSeg && curSeg.k==="power") startPower(curSeg);
+    run();
+  }
+  function skip(){
+    if(phase==="idle"||phase==="done") return;
+    cancelSpeech(); stopPower();
+    advance();
+    if(!running && phase!=="done"){
+      pausedRemaining = Math.max(0, endAt-Date.now());
+      clockEl.textContent = fmt(Math.ceil(pausedRemaining/1000));
+      freezeAnim();
+    }
+  }
+  /* Tap-to-release closes an open-ended hold: the BOLT measurement, or a
+     power-breathing hold with no target. */
+  function release(){
+    const seg = curSeg;
+    if(!seg || !seg.open) return;
+    const secs = Math.round((Date.now()-openStart)/1000);
+    releaseBtn.classList.remove("on");
+    if(tally){ tally.holds++; tally.holdSecs += secs; tally.longest = Math.max(tally.longest, secs); }
+    chime("down", 1); buzz([50,60,50]);
+    if(seg.test){ pendingBolt = secs; showBoltResult(secs); pauseSession(); return; }
+    advance();
+  }
+
+  /* ---------- session lifecycle ---------- */
+  function resetSession(){
+    cancelSpeech(); stopPower(); guideStop();
+    clearInterval(tickId); tickId = null;
+    running = false; phase = "idle"; segIndex = 0; curSeg = null; pendingBolt = null;
+    app.className = ""; startBtn.textContent = "Start"; skipBtn.disabled = true;
+    releaseBtn.classList.remove("on"); iris.classList.remove("free","fast");
+    stateLabel.textContent = "Ready"; cueEl.textContent = ""; subEl.textContent = "";
+    coachEl.textContent = ""; idleHint.style.display = "";
+    setIris(0.44, .6, "ease-out"); setRing(0, 0, 0);
+    releaseWake(); buildSchedule(); paintDots();
+    clockEl.textContent = fmt(sessionSecs());
+    hudProto.textContent = "STANDBY";
+    roundNow.textContent = pad2(0); roundTotal.textContent = pad2(totalRounds);
+    renderSessionLine();
+  }
+  function startSession(){
+    if(!gateOk()) return;
+    unlockAudio(); duckOtherAudio();
+    buildSchedule();
+    tally = {holds:0, holdSecs:0, longest:0, breaths:0, started:Date.now()};
+    segIndex = 0;
+    loadSegment(0);
+    run();
+    maybeSoundCheck();
+  }
+  function finish(){
+    stopPower(); guideStop(); cancelSpeech();
+    clearInterval(tickId); tickId = null;
+    running = false; phase = "done"; curSeg = null;
+    app.className = "done"; skipBtn.disabled = true; startBtn.textContent = "Start";
+    releaseBtn.classList.remove("on"); iris.classList.remove("free","fast");
+    setIris(0.5, 1.2, "ease-out"); setRing(0, 1, 1);
+    stateLabel.textContent = "Cycle complete"; cueEl.textContent = "Clear";
+    clockEl.textContent = "00:00"; subEl.textContent = "";
+    chime("flat", 1); buzz([180,90,180,90,320]);
+    say("Session complete. Nice work", "warm");
+    releaseWake();
+    const entry = recordSession();
+    // A loaded program session, completed, ticks the plan on — before the
+    // session is logged, so graduating lands on this summary card.
+    if(planActive!=null && planActive===(stats.plan?stats.plan.idx:0)){
+      stats.plan = {idx: planActive+1}; planActive = null; saveStats(); renderPlan();
+    }
+    entry.badges = awardBadges();
+    saveStats();
+    renderRecord(); renderLog(); renderSessionLine();
+    showSummary(entry);
+  }
+  function recordSession(){
+    const secs = Math.round((Date.now()-tally.started)/1000);
+    const blocks = blocksNow();
+    const names = [...new Set(blocks.map(b=>PROTOS[b.proto].label))];
+    const entry = {
+      t: Date.now(), secs, rounds: totalRounds,
+      holds: tally.holds, holdSecs: tally.holdSecs, longest: tally.longest, breaths: tally.breaths,
+      label: names.length<=2 ? names.join(" + ") : "Mixed",
+      structure: blocks.length===1 ? blockSub(blocks[0]) : `${blocks.length} blocks · ${fmtDur(secs)}`
+    };
+    const today = dayKey(new Date());
+    if(stats.lastDay !== today){
+      const y = dayKey(new Date(Date.now()-86400000));
+      stats.streak = (stats.lastDay===y) ? (stats.streak||0)+1 : 1;
+      stats.lastDay = today;
+      if(stats.streak > (stats.best||0)) stats.best = stats.streak;
+    }
+    stats.sessions++; stats.rounds += totalRounds;
+    stats.holdSecs = (stats.holdSecs||0) + tally.holdSecs;
+    stats.sessionSecs = (stats.sessionSecs||0) + secs;
+    stats.totals = stats.totals || {holds:0, breaths:0, longestHold:0};
+    stats.totals.holds += tally.holds;
+    stats.totals.breaths += tally.breaths;
+    stats.totals.longestHold = Math.max(stats.totals.longestHold||0, tally.longest);
+    stats.bests = stats.bests || {};
+    const pb = [];
+    if(tally.longest > (stats.bests.longest||0)){ stats.bests.longest = tally.longest; if(tally.longest>0) pb.push("Longest hold"); }
+    if(secs > (stats.bests.session||0)){ stats.bests.session = secs; pb.push("Longest session"); }
+    if(tally.holds > (stats.bests.holds||0)){ stats.bests.holds = tally.holds; if(tally.holds>0) pb.push("Most holds"); }
+    entry.pb = pb;
+    stats.history = stats.history || [];
+    stats.history.unshift(entry);
+    if(stats.history.length>60) stats.history.length = 60;
+    saveStats();
+    return entry;
+  }
+
+  /* ---------- milestones ---------- */
+  const BADGES = [
+    {id:"first",   name:"First cycle",    hit:()=>stats.sessions>=1},
+    {id:"ten",     name:"Ten sessions",   hit:()=>stats.sessions>=10},
+    {id:"fifty",   name:"Fifty sessions", hit:()=>stats.sessions>=50},
+    {id:"hundred", name:"Hundred holds",  hit:()=>(stats.totals&&stats.totals.holds)>=100},
+    {id:"hour",    name:"An hour held",   hit:()=>(stats.holdSecs||0)>=3600},
+    {id:"streak7", name:"Seven-day streak",  hit:()=>(stats.best||0)>=7},
+    {id:"streak30",name:"Thirty-day streak", hit:()=>(stats.best||0)>=30},
+    {id:"bolt20",  name:"BOLT 20",        hit:()=>(boltSecs()||0)>=20},
+    {id:"bolt30",  name:"BOLT 30",        hit:()=>(boltSecs()||0)>=30},
+    {id:"bolt40",  name:"BOLT 40",        hit:()=>(boltSecs()||0)>=40},
+    {id:"twomin",  name:"Two-minute hold",hit:()=>(stats.bests&&stats.bests.longest||0)>=120},
+    {id:"grad",    name:"Program graduate", hit:()=>(stats.plan&&stats.plan.idx)>=PLAN.length}
+  ];
+  function awardBadges(){
+    stats.badges = stats.badges || [];
+    const fresh = [];
+    BADGES.forEach(b=>{ if(!stats.badges.includes(b.id) && b.hit()){ stats.badges.push(b.id); fresh.push(b.name); } });
+    return fresh;
+  }
+
+  /* ---------- BOLT ---------- */
+  function showBoltResult(secs){
+    const band = boltBand(secs);
+    $("boltTitle").textContent = "First urge at " + fmtDur(secs);
+    $("boltSub").textContent = band.name + " CO₂ tolerance";
+    $("boltResult").innerHTML = boltHeroHtml(secs, band, "just now");
+    const prev = latestBolt();
+    const delta = prev ? secs - prev.secs : null;
+    const move = delta==null ? "" :
+      delta>0 ? ` Up ${delta}s on your last one.` :
+      delta<0 ? ` Down ${-delta}s on your last one — one reading is noise, keep going.` : " Same as last time.";
+    $("boltAdvice").textContent = band.note + move;
+    $("boltModal").classList.add("show");
+  }
+  function boltHeroHtml(secs, band, when){
+    const pos = clamp(secs/50, 0, 1)*100;
+    return `<div class="bnum">${secs}<small>s</small></div>
+      <div class="bband">${band.name}</div>
+      <div class="bwhen">${when}</div>
+      <div class="bolt-scale">
+        <span style="background:var(--empty)"></span><span style="background:color-mix(in srgb,var(--empty) 50%,var(--hold))"></span>
+        <span style="background:var(--hold)"></span><span style="background:color-mix(in srgb,var(--hold) 40%,var(--in))"></span>
+        <span style="background:var(--in)"></span>
+      </div>
+      <div class="bolt-mark"><i style="left:${pos.toFixed(1)}%"></i></div>
+      <div class="bolt-legend"><span>0</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50s</span></div>`;
+  }
+  function saveBolt(secs){
+    stats.bolt = stats.bolt || [];
+    stats.bolt.unshift({t:Date.now(), secs});
+    if(stats.bolt.length>200) stats.bolt.length = 200;
+    awardBadges(); saveStats();
+    renderBolt(); renderRecord(); renderSingle(); renderSessionLine();
+  }
+  const relDay = t => {
+    const d = Math.floor((Date.now()-t)/86400000);
+    return d<=0 ? "today" : d===1 ? "yesterday" : d<7 ? `${d} days ago` : d<14 ? "last week" : `${Math.floor(d/7)} weeks ago`;
+  };
+
+  /* ---------- 4-week program ----------
+     Twelve sessions, three a week. Every table entry scales to the current
+     BOLT score at load time, so week four is only as hard as you have become. */
+  const PLAN = [
+    {wk:1, name:"Meet the chamber", blocks:[{proto:"coherent", mins:6, inS:5.5, outS:5.5}]},
+    {wk:1, name:"First boxes",      blocks:[{proto:"box", mins:6, inS:4, hiS:4, outS:4, hoS:4}]},
+    {wk:1, name:"Measure up",       blocks:[{proto:"bolt"},{proto:"box", mins:6, inS:4, hiS:4, outS:4, hoS:4}]},
+    {wk:2, name:"Longer boxes",     blocks:[{proto:"box", mins:8, inS:5, hiS:5, outS:5, hoS:5}]},
+    {wk:2, name:"First air hunger", blocks:[{proto:"reduced", rounds:3, mins:2, inS:3, outS:4, hoS:3}]},
+    {wk:2, name:"Short table",      blocks:[{proto:"co2", rounds:6, hold:30, rest:90, restStep:10, lungs:"empty"}]},
+    {wk:3, name:"Table and settle", blocks:[{proto:"co2", rounds:8, hold:40, rest:120, restStep:15, lungs:"empty"},{proto:"coherent", mins:4, inS:5.5, outS:5.5}]},
+    {wk:3, name:"Walking pressure", blocks:[{proto:"walk", walks:6, hold:25, rest:60}]},
+    {wk:3, name:"Air hunger, longer", blocks:[{proto:"reduced", rounds:4, mins:3, inS:3, outS:4, hoS:4}]},
+    {wk:4, name:"Full table",       blocks:[{proto:"co2", rounds:8, hold:45, rest:120, restStep:15, lungs:"empty"}]},
+    {wk:4, name:"Ladder",           blocks:[{proto:"pyramid", rounds:7, base:30, holdStep:15, rest:90, lungs:"empty"}]},
+    {wk:4, name:"Graduation",       blocks:[{proto:"bolt"},{proto:"co2", rounds:10, hold:45, rest:120, restStep:15, lungs:"empty"},{proto:"coherent", mins:4, inS:5.5, outS:5.5}]}
+  ];
+  let planActive = null;
+  const planIdx = () => clamp((stats.plan && stats.plan.idx) || 0, 0, PLAN.length);
+
+  /* ---------- sheet + tabs ---------- */
+  function openSheet(pane){
+    if(pane) switchTab(pane);
+    sheet.classList.add("open");
+    renderRecord(); renderLog(); renderBolt(); renderPlan(); renderPresets();
+  }
+  function closeSheet(){ sheet.classList.remove("open"); if(phase==="idle") resetSession(); }
+  function switchTab(name){
+    document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on", b.dataset.pane===name));
+    document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on", p.id==="pane-"+name));
+    $("sheet").querySelector(".sheet-body").scrollTop = 0;
+  }
+  $("openSettings").addEventListener("click", ()=>openSheet());
+  $("closeSettings").addEventListener("click", closeSheet);
+  $("tabs").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) switchTab(b.dataset.pane); });
+  document.querySelectorAll(".help-btn").forEach(b=>b.addEventListener("click", ()=>{
+    const n = $(b.dataset.help); if(!n) return;
+    n.classList.toggle("open"); b.classList.toggle("on", n.classList.contains("open"));
+  }));
+
+  /* ---------- steppers ----------
+     One implementation for every numeric dial: tap to nudge, hold to run,
+     tap the value to type it. `get`/`set` come from the caller, so the same
+     widget drives protocol params, the get-ready countdown and the goal. */
+  function makeStepper(host, opt){
+    host.innerHTML = "";
+    const mk = (t)=>{ const b=document.createElement("button"); b.textContent=t; b.type="button"; return b; };
+    const minus = mk("−"), plus = mk("+");
+    const sv = document.createElement("div"); sv.className = "sv";
+    host.className = "stepper"; host.append(minus, sv, plus);
+    const paint = ()=>{ sv.textContent = opt.fmt(opt.get()); };
+    let hold=null, rep=null;
+    const bump = d => { opt.set(clamp(+(opt.get() + d*opt.step).toFixed(2), opt.min, opt.max)); paint(); };
+    const arm = (btn,d)=>{
+      const down = e=>{ e.preventDefault(); bump(d);
+        hold = setTimeout(()=>{ rep = setInterval(()=>bump(d), 110); }, 430); };
+      const up = ()=>{ clearTimeout(hold); clearInterval(rep); rep=null; };
+      btn.addEventListener("pointerdown", down);
+      ["pointerup","pointerleave","pointercancel"].forEach(ev=>btn.addEventListener(ev, up));
+    };
+    arm(minus,-1); arm(plus,1);
+    sv.addEventListener("click", ()=>{
+      if(sv.querySelector("input")) return;
+      const raw = opt.raw ? opt.raw(opt.get()) : String(opt.get());
+      sv.innerHTML = "";
+      const inp = document.createElement("input");
+      inp.type = "text"; inp.inputMode = "decimal"; inp.value = raw;
+      sv.appendChild(inp); inp.focus(); inp.select();
+      const done = ()=>{
+        const v = opt.parse ? opt.parse(inp.value) : parseFloat(inp.value);
+        if(isFinite(v)) opt.set(clamp(Math.round(v/opt.step)*opt.step, opt.min, opt.max));
+        sv.innerHTML = ""; paint();
+      };
+      inp.addEventListener("blur", done);
+      inp.addEventListener("keydown", e=>{ if(e.key==="Enter") inp.blur(); });
+    });
+    paint();
+    return {paint};
+  }
+  // "1:30" and "90" both mean ninety seconds.
+  const parseTime = v => { const m=String(v).trim().match(/^(\d+):(\d{1,2})$/); return m ? (+m[1])*60 + (+m[2]) : parseFloat(v); };
+
+  /* ---------- protocol parameters ---------- */
+  function buildParams(root, b, onChange){
+    root.innerHTML = "";
+    const P = PROTOS[b.proto];
+    if(!P.params.length){
+      const d = document.createElement("div");
+      d.className = "note"; d.style.margin = "0"; d.textContent = "Nothing to set — this one runs itself.";
+      root.appendChild(d); return;
+    }
+    root.classList.toggle("one", P.params.length===1);
+    P.params.forEach(key=>{
+      const spec = PARAMS[key];
+      const cell = document.createElement("div");
+      const cap = document.createElement("div"); cap.className = "cap"; cap.textContent = spec.cap;
+      const host = document.createElement("div");
+      cell.append(cap, host); root.appendChild(cell);
+      makeStepper(host, {
+        min:spec.min, max:spec.max, step:spec.step,
+        get:()=>b[key], set:v=>{ b[key]=v; onChange(); },
+        fmt:v=>pfmt(key, v),
+        raw:v=> spec.f==="t" && v>=60 ? fmtS(v) : String(v),
+        parse: spec.f==="t" ? parseTime : parseFloat
+      });
+    });
+    if(P.lungs){
+      const cell = document.createElement("div");
+      cell.style.gridColumn = "1 / -1";
+      cell.innerHTML = `<div class="cap">Hold on</div>`;
+      const seg = document.createElement("div"); seg.className = "seg tight";
+      [["empty","Empty lungs"],["full","Full lungs"]].forEach(([v,l])=>{
+        const btn = document.createElement("button"); btn.textContent = l;
+        btn.classList.toggle("on", (b.lungs||"empty")===v);
+        btn.addEventListener("click", ()=>{ b.lungs=v; onChange(); buildParams(root, b, onChange); });
+        seg.appendChild(btn);
+      });
+      cell.appendChild(seg); root.appendChild(cell);
+    }
+  }
+  function paramNoteFor(b){
+    const P = PROTOS[b.proto];
+    let s = "";
+    if(P.lungs) s += (b.lungs==="full")
+      ? "<b>Full lungs</b> is the freediving version: bigger, longer holds that train your tolerance for low oxygen. "
+      : "<b>Empty lungs</b> — a normal exhale, then hold. Shorter, sharper, and the version that transfers straight to your BOLT score. ";
+    if(cfg.scaleToBolt && boltSecs() && ["co2","o2","pyramid","walk","reduced"].includes(b.proto))
+      s += `Scaled to your BOLT of ${boltSecs()}s (Setup → More → CO₂ tolerance).`;
+    else if(["co2","o2","pyramid"].includes(b.proto))
+      s += "Take the BOLT test and turn on <b>Scale sessions to my score</b> to have these numbers set themselves.";
+    if(P.warn) s += `<br><br><b style="color:var(--empty)">${P.warn}</b>`;
+    return s;
+  }
+  function renderSingle(){
+    const sel = $("sProto");
+    if(!sel.options.length) PROTO_IDS.forEach(id=>{
+      const o = document.createElement("option"); o.value = id; o.textContent = PROTOS[id].label; sel.appendChild(o);
+    });
+    sel.value = cfg.block.proto;
+    $("protoNote").innerHTML = PROTOS[cfg.block.proto].blurb;
+    buildParams($("paramGrid"), cfg.block, ()=>{ save(); afterEdit(); });
+    $("paramNote").innerHTML = paramNoteFor(cfg.block);
+    $("paramField").style.display = PROTOS[cfg.block.proto].params.length || PROTOS[cfg.block.proto].lungs ? "block" : "none";
+  }
+  function afterEdit(){
+    $("vSingleLen").textContent = fmtDur(sessionSecs());
+    $("vSeqLen").textContent = fmtDur(sessionSecs());
+    $("paramNote").innerHTML = paramNoteFor(cfg.mode==="sequence" ? cfg.seq[0] : cfg.block);
+    if(phase==="idle"){ buildSchedule(); paintDots(); clockEl.textContent = fmt(sessionSecs()); roundTotal.textContent = pad2(totalRounds); }
+    renderPresets(); renderSessionLine();
+  }
+  $("sProto").addEventListener("change", e=>{
+    cfg.block = normBlock({proto:e.target.value});
+    save(); renderSingle(); afterEdit();
+  });
+  $("segMode").addEventListener("click", e=>{
+    const b = e.target.closest("button"); if(!b) return;
+    cfg.mode = b.dataset.v; save();
+    document.querySelectorAll("#segMode button").forEach(x=>x.classList.toggle("on", x.dataset.v===cfg.mode));
+    $("singleBox").style.display = cfg.mode==="single" ? "block" : "none";
+    $("seqBox").style.display    = cfg.mode==="sequence" ? "block" : "none";
+    renderSeq(); afterEdit();
+  });
+
+  /* ---------- sequence editor ---------- */
+  let seqOpen = -1;
+  function renderSeq(){
+    const host = $("seqList"); host.innerHTML = "";
+    cfg.seq.forEach((b, i)=>{
+      if(i===seqOpen){
+        const box = document.createElement("div"); box.className = "seqedit";
+        const sel = document.createElement("select");
+        PROTO_IDS.forEach(id=>{ const o=document.createElement("option"); o.value=id; o.textContent=PROTOS[id].label; sel.appendChild(o); });
+        sel.value = b.proto;
+        sel.addEventListener("change", ()=>{ cfg.seq[i] = normBlock({proto:sel.value}); save(); renderSeq(); afterEdit(); });
+        const grid = document.createElement("div"); grid.className = "param-grid"; grid.style.marginTop = "10px";
+        const note = document.createElement("div"); note.className = "note";
+        note.innerHTML = PROTOS[b.proto].blurb;
+        buildParams(grid, b, ()=>{ save(); afterEdit(); });
+        const btns = document.createElement("div"); btns.className = "rowbtns";
+        const mk = (t,cls,fn)=>{ const x=document.createElement("button"); x.textContent=t; if(cls) x.className=cls; x.addEventListener("click",fn); return x; };
+        btns.append(
+          mk("Up","",()=>{ if(i>0){ [cfg.seq[i-1],cfg.seq[i]]=[cfg.seq[i],cfg.seq[i-1]]; seqOpen=i-1; save(); renderSeq(); afterEdit(); } }),
+          mk("Down","",()=>{ if(i<cfg.seq.length-1){ [cfg.seq[i+1],cfg.seq[i]]=[cfg.seq[i],cfg.seq[i+1]]; seqOpen=i+1; save(); renderSeq(); afterEdit(); } }),
+          mk("Duplicate","",()=>{ cfg.seq.splice(i+1,0,normBlock(JSON.parse(JSON.stringify(b)))); seqOpen=i+1; save(); renderSeq(); afterEdit(); }),
+          mk("Remove","danger",()=>{ if(cfg.seq.length<=1) return; cfg.seq.splice(i,1); seqOpen=-1; save(); renderSeq(); afterEdit(); }),
+          mk("Done","",()=>{ seqOpen=-1; renderSeq(); })
+        );
+        box.append(sel, grid, note, btns); host.appendChild(box);
+      } else {
+        const row = document.createElement("div"); row.className = "seqrow";
+        row.innerHTML = `<div><div class="nm">${PROTOS[b.proto].label}</div><div class="meta">${blockSub(b)}</div></div>
+                         <div class="big">${fmtDur(blockLen(b))}</div>`;
+        row.addEventListener("click", ()=>{ seqOpen = i; renderSeq(); });
+        host.appendChild(row);
+      }
+    });
+  }
+  $("addBlock").addEventListener("click", ()=>{
+    cfg.seq.push(normBlock({proto:"coherent"}));
+    seqOpen = cfg.seq.length-1; save(); renderSeq(); afterEdit();
+  });
+
+  /* ---------- quick start ---------- */
+  function currentSig(){ return JSON.stringify(cfg.mode==="sequence" ? cfg.seq.map(normBlock) : [normBlock(cfg.block)]); }
+  function applyBlocks(blocks){
+    const bs = blocks.map(normBlock);
+    if(bs.length===1){ cfg.mode = "single"; cfg.block = bs[0]; }
+    else { cfg.mode = "sequence"; cfg.seq = bs; }
+    save();
+    document.querySelectorAll("#segMode button").forEach(x=>x.classList.toggle("on", x.dataset.v===cfg.mode));
+    $("singleBox").style.display = cfg.mode==="single" ? "block" : "none";
+    $("seqBox").style.display    = cfg.mode==="sequence" ? "block" : "none";
+    seqOpen = -1;
+    renderSingle(); renderSeq(); afterEdit();
+  }
+  function renderPresets(){
+    const host = $("presetGrid"); host.innerHTML = "";
+    const sig = currentSig();
+    const add = (item, mine)=>{
+      const el = document.createElement("button");
+      el.className = "wk" + (mine?" mine":"") + (JSON.stringify(item.blocks.map(normBlock))===sig ? " on" : "");
+      const total = item.blocks.reduce((a,b)=>a+blockLen(normBlock(b)),0);
+      el.innerHTML = `<div class="nm">${item.name}</div><div class="sub">${item.blocks.length>1 ? item.blocks.length+" blocks · " : ""}${fmtDur(total)}</div>`;
+      el.addEventListener("click", e=>{ if(e.target.classList.contains("wkdel")) return; applyBlocks(item.blocks); });
+      if(mine){
+        const d = document.createElement("span"); d.className = "wkdel"; d.textContent = "×";
+        d.addEventListener("click", e=>{ e.stopPropagation(); cfg.mine = cfg.mine.filter(m=>m.id!==item.id); save(); renderPresets(); });
+        el.appendChild(d);
+      }
+      host.appendChild(el);
+    };
+    PRESETS.forEach(p=>add(p, false));
+    (cfg.mine||[]).forEach(p=>add(p, true));
+  }
+  $("wkSave").addEventListener("click", ()=>{
+    const name = ($("wkName").value||"").trim();
+    if(!name) return;
+    cfg.mine = cfg.mine || [];
+    cfg.mine.push({id:"m"+Date.now(), name, blocks: cfg.mode==="sequence" ? cfg.seq.map(normBlock) : [normBlock(cfg.block)]});
+    $("wkName").value = ""; save(); renderPresets();
+  });
+
+  /* ---------- get ready ---------- */
+  makeStepper($("vPrep").parentElement, {
+    min:0, max:60, step:5,
+    get:()=>cfg.prep, set:v=>{ cfg.prep=v; save(); afterEdit(); $("vPrepLbl").textContent = cfg.prep ? fmtDur(cfg.prep) : "off"; },
+    fmt:v=>v ? `${v}s` : "Off"
+  });
+  $("vPrepLbl").textContent = cfg.prep ? fmtDur(cfg.prep) : "off";
+
+  /* ---------- coaching pane ---------- */
+  loadVoices();
+  $("sVoice").addEventListener("change", e=>{
+    cfg.voice = e.target.value; save();
+    clipBuf.clear(); voicePackWant = null; voicePack = null;
+    applyVoicePack(); unlockAudio();
+    setTimeout(()=>say("Inhale. Hold. Exhale", "cue"), 350);
+    renderPrefetchNote();
+  });
+  function wireSeg(id, key, after){
+    const host = $(id);
+    document.querySelectorAll(`#${id} button`).forEach(b=>b.classList.toggle("on", String(cfg[key])===b.dataset.v));
+    host.addEventListener("click", e=>{
+      const b = e.target.closest("button"); if(!b) return;
+      cfg[key] = b.dataset.v; save();
+      document.querySelectorAll(`#${id} button`).forEach(x=>x.classList.toggle("on", x===b));
+      if(after) after();
+    });
+  }
+  wireSeg("segChatter", "chatter");
+  wireSeg("segChime", "chime", ()=>{ unlockAudio(); chime("up", 1); });
+  function wireToggle(id, key, after){
+    const el = $(id); el.checked = cfg[key]!==false;
+    el.addEventListener("change", ()=>{ cfg[key] = el.checked; save(); if(after) after(); });
+  }
+  wireToggle("sCount", "countIn");
+  wireToggle("sVibrate", "vibrateOn", ()=>buzz([60]));
+  wireToggle("sSilent", "playInSilent", duckOtherAudio);
+  wireToggle("sWake", "wakeOn", ()=>{ if(!cfg.wakeOn) releaseWake(); else if(running) acquireWake(); });
+  (function(){ const el=$("sGuide"); el.checked = !!cfg.guideTone;
+    el.addEventListener("change", ()=>{ cfg.guideTone = el.checked; save(); if(!cfg.guideTone) guideStop(); else { unlockAudio(); guidePhase("in", 2); setTimeout(()=>guidePhase("out", 2), 2000); setTimeout(guideStop, 4200); } });
+  })();
+  (function(){
+    const s = $("sSpeed"); s.value = cfg.speed;
+    const paint = ()=>{ $("vSpeed").textContent = (+cfg.speed).toFixed(2).replace(/0$/,"") + "×"; };
+    paint();
+    s.addEventListener("input", ()=>{ cfg.speed = parseFloat(s.value); paint(); });
+    s.addEventListener("change", ()=>{ save(); unlockAudio(); say("Breathe out, and hold", "calm"); });
+  })();
+  $("btnTestVoice").addEventListener("click", ()=>{ unlockAudio(); duckOtherAudio(); chime("up",1); setTimeout(()=>say("Inhale. Hold. Exhale. Hold empty", "cue"), 320); });
+
+  /* ---------- CO2 tolerance pane ---------- */
+  function renderBolt(){
+    const b = latestBolt();
+    $("boltState").textContent = b ? `${b.secs}s · ${boltBand(b.secs).name}` : "not measured";
+    $("boltHero").innerHTML = b
+      ? boltHeroHtml(b.secs, boltBand(b.secs), relDay(b.t))
+      : `<div class="bnum">—</div><div class="bband">No score yet</div><div class="bwhen">take the test to set your baseline</div>`;
+    // Twelve weeks, one bar per week (the best reading in that week).
+    const now = new Date();
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay()+6)%7)).getTime();
+    const weeks = [];
+    for(let i=11;i>=0;i--){
+      const from = monday - i*604800000, to = from + 604800000;
+      const inWk = (stats.bolt||[]).filter(e=>e.t>=from && e.t<to);
+      weeks.push(inWk.length ? Math.max(...inWk.map(e=>e.secs)) : 0);
+    }
+    const max = Math.max(20, ...weeks);
+    $("boltTrend").innerHTML = weeks.map((v,i)=>
+      `<div class="trend-col"><span class="tv">${v||""}</span><div class="trend-bar${i===11?" cur":""}" style="height:${v?Math.max(3,(v/max)*46):2}px"></div></div>`).join("");
+    const first = (stats.bolt||[]).slice(-1)[0];
+    $("boltTrendCap").textContent = (b && first && first!==b)
+      ? `${stats.bolt.length} readings · ${b.secs-first.secs>=0?"+":""}${b.secs-first.secs}s since your first`
+      : "one bar per week — best reading in that week";
+  }
+  function runBoltTest(){ closeSheet(); applyBlocks([{proto:"bolt"}]); setTimeout(()=>{ if(phase==="idle") startSession(); }, 260); }
+  $("boltRun").addEventListener("click", runBoltTest);
+  $("boltManual").addEventListener("click", ()=>{
+    const v = prompt("Seconds to the first definite urge to breathe:", String(boltSecs()||20));
+    const n = parseInt(v,10);
+    if(isFinite(n) && n>0 && n<600){ saveBolt(n); showBoltResult(n); }
+  });
+  $("boltSave").addEventListener("click", ()=>{
+    if(pendingBolt!=null){ saveBolt(pendingBolt); pendingBolt = null; }
+    $("boltModal").classList.remove("show");
+    // The test may be the whole session or the first block of one: carry on
+    // into the next segment if there is one, otherwise stand down.
+    if(curSeg){ run(); advance(); } else resetSession();
+  });
+  $("boltRedo").addEventListener("click", ()=>{ pendingBolt = null; $("boltModal").classList.remove("show"); resetSession(); runBoltTest(); });
+  (function(){ const el=$("sScale"); el.checked = cfg.scaleToBolt!==false;
+    el.addEventListener("change", ()=>{ cfg.scaleToBolt = el.checked; save(); renderSingle(); renderSeq(); afterEdit(); });
+  })();
+
+  /* ---------- your record ---------- */
+  function weekSessions(){
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()-((now.getDay()+6)%7)).getTime();
+    return (stats.history||[]).filter(e=>e.t>=start).length;
+  }
+  function renderRecord(){
+    $("recordState").textContent = stats.sessions ? `${stats.sessions} session${stats.sessions===1?"":"s"}` : "nothing yet";
+    const held = stats.holdSecs||0;
+    $("statsGrid").innerHTML = [
+      [stats.sessions||0, "Sessions"],
+      [stats.totals && stats.totals.holds || 0, "Holds"],
+      [held>=3600 ? (held/3600).toFixed(1)+"h" : Math.round(held/60)+"m", "Held"],
+      [stats.streak||0, "Day streak"]
+    ].map(([n,l])=>`<div class="stat"><span class="snum${String(n).length>4?" word":""}">${n}</span><span class="slbl">${l}</span></div>`).join("");
+
+    const now = new Date();
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate()-((now.getDay()+6)%7)).getTime();
+    const weeks = [];
+    for(let i=7;i>=0;i--){
+      const from = monday - i*604800000, to = from + 604800000;
+      weeks.push((stats.history||[]).filter(e=>e.t>=from && e.t<to).length);
+    }
+    const max = Math.max(1, ...weeks);
+    $("weekTrend").innerHTML = weeks.map((v,i)=>
+      `<div class="trend-col"><span class="tv">${v||""}</span><div class="trend-bar in${i===7?" cur":""}" style="height:${v?Math.max(3,(v/max)*46):2}px"></div></div>`).join("");
+    $("weekTrendCap").textContent = "last eight weeks";
+
+    const goal = stats.goal||0, done = weekSessions();
+    $("vGoal").textContent = goal ? `${done} / ${goal}` : "off";
+    $("goalNote").textContent = !goal ? "Off — no weekly target."
+      : done>=goal ? `Hit for this week. ${done} in.`
+      : `${goal-done} more this week.`;
+
+    const B = stats.bests||{};
+    $("bestsNote").innerHTML = stats.sessions
+      ? `Longest hold <b>${B.longest?fmtDur(B.longest):"—"}</b> · longest session <b>${B.session?fmtDur(B.session):"—"}</b> · most holds in one session <b>${B.holds||0}</b>`
+      : "Nothing to beat yet.";
+    stats.badges = stats.badges || [];
+    $("badgeRow").innerHTML = BADGES.map(b=>`<span class="badge${stats.badges.includes(b.id)?" on":""}">${b.name}</span>`).join("");
+  }
+  makeStepper($("goalVal").parentElement, {
+    min:0, max:14, step:1,
+    get:()=>stats.goal||0, set:v=>{ stats.goal=v; saveStats(); renderRecord(); },
+    fmt:v=>v?String(v):"Off"
+  });
+
+  /* ---------- session log ---------- */
+  function renderLog(){
+    const h = stats.history||[];
+    $("logState").textContent = h.length ? `${h.length} logged` : "empty";
+    $("logList").innerHTML = h.length ? h.map(e=>{
+      const d = new Date(e.t);
+      const when = d.toLocaleDateString(undefined,{weekday:"short", day:"numeric", month:"short"});
+      const time = d.toLocaleTimeString(undefined,{hour:"2-digit", minute:"2-digit"});
+      const big = e.holds ? fmtDur(e.longest||0) : fmtDur(e.secs);
+      const lbl = e.holds ? "longest hold" : "duration";
+      return `<div class="log-row"><div><div class="when">${when} · ${time}</div>
+        <div class="meta">${e.label} · ${e.structure}${e.holds?` · ${e.holds} holds`:""}</div></div>
+        <div class="big">${big}<small>${lbl}</small></div></div>`;
+    }).join("") : `<div class="log-empty">No sessions logged yet.</div>`;
+  }
+
+  /* ---------- protocol guide ---------- */
+  (function renderGuide(){
+    $("guideList").innerHTML = PROTO_IDS.map(id=>{
+      const p = PROTOS[id];
+      return `<div class="seqedit" style="border-color:var(--line);margin-bottom:8px;">
+        <div class="nm" style="font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:13.5px;margin-bottom:6px;">${p.label}</div>
+        <div class="note" style="margin-top:0;">${p.blurb}${p.warn?`<br><br><b style="color:var(--empty)">${p.warn}</b>`:""}</div>
+      </div>`;
+    }).join("");
+  })();
+
+  /* ---------- 4-week program ---------- */
+  function renderPlan(){
+    const i = planIdx();
+    const done = i>=PLAN.length;
+    $("planState").textContent = done ? "graduated" : `session ${i+1} of ${PLAN.length}`;
+    const s = done ? PLAN[PLAN.length-1] : PLAN[i];
+    const total = s.blocks.reduce((a,b)=>a+blockLen(scaled(normBlock(b))),0);
+    $("planCard").innerHTML = done
+      ? `<div class="nm" style="font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Program complete</div>
+         <div class="note" style="margin-top:6px;">Twelve sessions done. Re-run the last week, or build your own from the protocols — and keep measuring your BOLT.</div>`
+      : `<div class="nm" style="font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Week ${s.wk} · ${s.name}</div>
+         <div class="meta" style="font-size:11.5px;color:var(--steel);text-transform:uppercase;letter-spacing:.04em;margin-top:3px;">${s.blocks.map(b=>PROTOS[b.proto].label).join(" → ")} · ${fmtDur(total)}</div>`;
+  }
+  $("planLoad").addEventListener("click", ()=>{
+    const i = planIdx(); if(i>=PLAN.length) return;
+    planActive = i;
+    applyBlocks(PLAN[i].blocks.map(b=>scaled(normBlock(b))));
+    switchTab("session");
+  });
+  $("planReset").addEventListener("click", ()=>{ stats.plan = {idx:0}; planActive = null; saveStats(); renderPlan(); });
+
+  /* ---------- themes ---------- */
+  (function renderThemes(){
+    const host = $("themeGrid");
+    host.innerHTML = Object.entries(THEMES).map(([id,t])=>
+      `<button class="theme-chip${id===cfg.theme?" on":""}" data-t="${id}">
+         <div class="nm">${t.label}</div>
+         <div class="sw"><span style="background:${t.v.in}"></span><span style="background:${t.v.hold}"></span><span style="background:${t.v.out}"></span><span style="background:${t.v.empty}"></span><span style="background:${t.v.canvas};border-color:${t.v.line}"></span></div>
+       </button>`).join("");
+    host.addEventListener("click", e=>{
+      const b = e.target.closest(".theme-chip"); if(!b) return;
+      cfg.theme = b.dataset.t; save(); applyTheme(cfg.theme);
+      host.querySelectorAll(".theme-chip").forEach(x=>x.classList.toggle("on", x===b));
+    });
+  })();
+
+  /* ---------- backup & restore ---------- */
+  $("btnExport").addEventListener("click", ()=>{
+    const blob = new Blob([JSON.stringify({app:"airlock", v:1, at:Date.now(), cfg, stats}, null, 1)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `airlock-${new Date().toISOString().slice(0,10)}.airlock`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  });
+  $("btnImport").addEventListener("click", ()=>$("fileImport").click());
+  $("fileImport").addEventListener("change", e=>{
+    const f = e.target.files && e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ()=>{
+      try{
+        const d = JSON.parse(r.result);
+        if(!d || d.app!=="airlock") throw new Error("not an Airlock backup");
+        if(d.cfg){ cfg = Object.assign(loadCfg(), d.cfg); cfg.block = normBlock(cfg.block); cfg.seq = (cfg.seq||[]).map(normBlock); save(); }
+        if(d.stats){ stats = Object.assign(freshStats(), d.stats); saveStats(); }
+        applyTheme(cfg.theme); loadVoices(); renderAll(); resetSession();
+        alert("Restored.");
+      }catch(err){ alert("That file isn't an Airlock backup."); }
+      e.target.value = "";
+    };
+    r.readAsText(f);
+  });
+  $("btnWipe").addEventListener("click", ()=>{
+    if(!confirm("Erase all Airlock settings, your BOLT history and your session log from this device? This cannot be undone.")) return;
+    store.del("airlock.cfg"); store.del("airlock.stats"); store.del("airlock.gate"); store.del("airlock.sound"); store.del("airlock.tut");
+    location.reload();
+  });
+
+  /* ---------- take the coach offline ---------- */
+  function renderPrefetchNote(){
+    const n = $("prefetchNote");
+    const id = packIdOf(cfg.voice);
+    n.innerHTML = id
+      ? "Downloads the whole voice pack in one go, so the coach still talks with no signal. The app shell and the tones already work offline."
+      : "The app shell, the chamber and the tones already work offline. The <b>device voice</b> is your phone's own and needs nothing downloaded — install a recorded pack under <b>Coach voice</b> if you want a warmer coach.";
+    $("btnPrefetch").disabled = !id;
+    $("btnPrefetch").style.opacity = id ? "" : ".45";
+  }
+  $("btnPrefetch").addEventListener("click", async ()=>{
+    const id = packIdOf(cfg.voice); if(!id) return;
+    const btn = $("btnPrefetch"); btn.disabled = true; btn.textContent = "Downloading…";
+    try{
+      const m = await fetch(`voice/${id}/manifest.json`).then(r=>r.json());
+      const slugs = m.slugs||[];
+      let done = 0;
+      for(const s of slugs){
+        try{ await fetch(`voice/${id}/${s}.mp3`); }catch(e){}
+        done++; if(done%10===0) btn.textContent = `Downloading… ${done}/${slugs.length}`;
+      }
+      btn.textContent = `Ready offline · ${slugs.length} clips`;
+    }catch(e){ btn.textContent = "Couldn't download — try again online"; btn.disabled = false; }
+  });
+
+  /* ---------- safety gate ----------
+     Shown once, before anything can run. Breath-holding has one genuinely
+     fatal failure mode and it is worth four sentences of friction. */
+  function gateOk(){
+    if(store.get("airlock.gate")==="1") return true;
+    $("safetyGate").classList.add("show");
+    return false;
+  }
+  $("safetyOk").addEventListener("click", ()=>{
+    store.set("airlock.gate","1");
+    $("safetyGate").classList.remove("show");
+    // A first-time user meets the gate before anything else, so the tour has
+    // to wait for it rather than fire underneath it.
+    if(store.get("airlock.tut")!=="1" && !stats.sessions) setTimeout(()=>showTut(0), 450);
+  });
+  $("safetyReshow").addEventListener("click", ()=>{ closeSheet(); $("safetyGate").classList.add("show"); });
+
+  /* ---------- first-run sound check ---------- */
+  function maybeSoundCheck(){
+    if(store.get("airlock.sound")==="1") return;
+    setTimeout(()=>{
+      if(store.get("airlock.sound")==="1") return;
+      pauseSession();
+      $("audioCheck").classList.add("show");
+    }, 1400);
+  }
+  $("acOk").addEventListener("click", ()=>{
+    store.set("airlock.sound","1");
+    $("audioCheck").classList.remove("show");
+    if(curSeg) resumeSession();
+  });
+  $("acAgain").addEventListener("click", ()=>{
+    $("acTips").classList.add("show");
+    unlockAudio(); duckOtherAudio(); chime("up",1);
+    setTimeout(()=>say("Inhale. Hold. Exhale", "cue"), 320);
+  });
+
+  /* ---------- session summary ---------- */
+  function showSummary(e){
+    $("sumEyebrow").textContent = e.label;
+    $("sumTitle").textContent = pick(["Cycle complete","Lock cleared","Pressure equalised","Chamber clear"]);
+    $("sumSub").textContent = e.structure;
+    $("sumGrid").innerHTML = [
+      [fmtDur(e.secs), "Session"],
+      [e.holds || "—", "Holds"],
+      [e.holds ? fmtDur(e.longest) : fmtDur(e.breaths ? e.breaths : 0), e.holds ? "Longest" : "Breaths"]
+    ].map(([n,l])=>`<div class="sum-cell"><span class="n">${n}</span><span class="l">${l}</span></div>`).join("");
+    const held = e.holdSecs ? `${fmtDur(e.holdSecs)} spent holding` : `${e.breaths} paced breaths`;
+    $("sumNote").textContent = held + (e.pb && e.pb.length ? ` · ${e.pb.join(", ").toLowerCase()}` : "");
+    const goal = stats.goal||0, done = weekSessions();
+    $("sumStreak").textContent = [
+      stats.streak>1 ? `${stats.streak}-day streak` : "",
+      goal ? (done>=goal ? `weekly goal hit — ${done}/${goal}` : `${done}/${goal} this week`) : ""
+    ].filter(Boolean).join("  ·  ");
+    const bd = $("sumBadges");
+    if(e.badges && e.badges.length){ bd.style.display = "flex"; bd.innerHTML = e.badges.map(b=>`<span>${b}</span>`).join(""); }
+    else bd.style.display = "none";
+    $("summary").classList.add("show");
+  }
+  $("sumClose").addEventListener("click", ()=>{ $("summary").classList.remove("show"); resetSession(); });
+  $("sumLog").addEventListener("click", ()=>{ $("summary").classList.remove("show"); resetSession(); openSheet("more"); $("logAcc").open = true; $("logAcc").scrollIntoView({behavior:"smooth", block:"center"}); });
+
+  /* ---------- idle session line ---------- */
+  function renderSessionLine(){
+    const el = $("sessionLine");
+    const blocks = blocksNow();
+    const name = blocks.length===1 ? PROTOS[blocks[0].proto].label : `${blocks.length} blocks`;
+    const b = latestBolt();
+    el.textContent = `${name} · ${fmtDur(sessionSecs())}` + (b ? `  ·  BOLT ${b.secs}s` : "");
+    el.style.display = "";
+  }
+  $("sessionLine").addEventListener("click", ()=>openSheet("session"));
+
+  /* ---------- tutorial ---------- */
+  const TUT = [
+    {el:null, t:"What this is", p:"Airlock trains CO₂ tolerance — how calmly you handle the urge to breathe. The chamber in the middle paces every breath, and the coach calls it out loud so you can shut your eyes."},
+    {el:"chamber", t:"The chamber", p:"The iris opens on an inhale and closes on an exhale. The ring around it fills through whatever phase you are in, so a glance tells you how long is left."},
+    {el:"sessionLine", t:"What is loaded", p:"This line is your session: the protocol, how long it runs and your latest BOLT score. Tap it to change any of that."},
+    {el:"openSettings", t:"Setup", p:"Eleven protocols live in here — CO₂ and O₂ tables, box breathing, 4-7-8, reduced breathing, apnea walks — plus the BOLT test, your record and a 4-week program that scales itself to your score."},
+    {el:"startBtn", t:"Start with the test", p:"If you do one thing first, do the BOLT test: Setup → More → CO₂ tolerance. It sets your baseline, and every table after that is sized from it."}
+  ];
+  let tutStep = 0;
+  function showTut(i){
+    tutStep = i;
+    const s = TUT[i], tut = $("tut"), spot = $("tutSpot"), box = $("tutBox");
+    tut.classList.add("show");
+    if(s.el){
+      const r = $(s.el).getBoundingClientRect();
+      const pad = 8;
+      spot.style.display = "block";
+      spot.style.left = (r.left-pad)+"px"; spot.style.top = (r.top-pad)+"px";
+      spot.style.width = (r.width+pad*2)+"px"; spot.style.height = (r.height+pad*2)+"px";
+      tut.classList.add("spot");
+      const below = r.bottom + 190 < window.innerHeight;
+      box.style.top = below ? (r.bottom+16)+"px" : "";
+      box.style.bottom = below ? "" : (window.innerHeight - r.top + 16)+"px";
+    } else {
+      spot.style.display = "none"; tut.classList.remove("spot");
+      box.style.top = "50%"; box.style.bottom = ""; box.style.transform = "translateY(-50%)";
+    }
+    if(s.el) box.style.transform = "";
+    $("tutTitle").textContent = s.t; $("tutText").textContent = s.p;
+    $("tutStep").textContent = `${i+1} / ${TUT.length}`;
+    $("tutNext").textContent = i===TUT.length-1 ? "Got it" : "Next";
+  }
+  function endTut(){ $("tut").classList.remove("show"); store.set("airlock.tut","1"); }
+  $("openTutorial").addEventListener("click", ()=>showTut(0));
+  $("tutSkip").addEventListener("click", endTut);
+  $("tutNext").addEventListener("click", ()=>{ if(tutStep>=TUT.length-1) endTut(); else showTut(tutStep+1); });
+
+  /* ---------- primary controls ---------- */
+  startBtn.addEventListener("click", ()=>{
+    unlockAudio();
+    if(phase==="idle" || phase==="done") startSession();
+    else if(running) pauseSession();
+    else resumeSession();
+  });
+  resetBtn.addEventListener("click", resetSession);
+  skipBtn.addEventListener("click", skip);
+  releaseBtn.addEventListener("click", release);
+  // Tapping the chamber releases an open hold too — easier to hit with your
+  // eyes half shut than a button.
+  chamber.addEventListener("click", ()=>{ if(curSeg && curSeg.open) release(); });
+  document.addEventListener("keydown", e=>{
+    if(e.target && /input|select|textarea/i.test(e.target.tagName)) return;
+    if(e.code==="Space"){ e.preventDefault(); if(curSeg && curSeg.open) release(); else startBtn.click(); }
+    if(e.code==="ArrowRight" && !skipBtn.disabled) skip();
+    if(e.key==="Escape"){ if(sheet.classList.contains("open")) closeSheet(); else if($("tut").classList.contains("show")) endTut(); }
+  });
+
+  /* ---------- boot ---------- */
+  function renderAll(){
+    document.querySelectorAll("#segMode button").forEach(x=>x.classList.toggle("on", x.dataset.v===cfg.mode));
+    $("singleBox").style.display = cfg.mode==="single" ? "block" : "none";
+    $("seqBox").style.display    = cfg.mode==="sequence" ? "block" : "none";
+    document.querySelectorAll("#segChatter button").forEach(b=>b.classList.toggle("on", b.dataset.v===cfg.chatter));
+    document.querySelectorAll("#segChime button").forEach(b=>b.classList.toggle("on", b.dataset.v===cfg.chime));
+    renderSingle(); renderSeq(); renderPresets(); renderBolt(); renderRecord(); renderLog(); renderPlan(); renderPrefetchNote();
+    $("verLine").textContent = `Airlock ${APP_VERSION}`;
+  }
+  renderAll();
+  resetSession();
+  afterEdit();
+  if(store.get("airlock.gate")!=="1") $("safetyGate").classList.add("show");   // tour follows on acknowledge
+  else if(store.get("airlock.tut")!=="1" && !stats.sessions) setTimeout(()=>showTut(0), 700);
+
+  /* ---------- PWA ---------- */
+  if("serviceWorker" in navigator && location.protocol.startsWith("http"))
+    window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+})();
+</script>
+</body>
+</html>

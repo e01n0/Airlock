@@ -1,0 +1,16 @@
+{
+  "name": "Airlock",
+  "short_name": "Airlock",
+  "description": "A breathwork trainer that builds CO2 tolerance — BOLT test, CO2 and O2 tables, box breathing and apnea walks, paced out loud.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080c0f",
+  "theme_color": "#080c0f",
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

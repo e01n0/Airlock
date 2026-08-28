@@ -1,0 +1,620 @@
+[
+ {
+  "slug": "inhale",
+  "text": "Inhale",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "hold",
+  "text": "Hold",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "exhale",
+  "text": "Exhale",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "hold-empty",
+  "text": "Hold empty",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "breathe",
+  "text": "Breathe",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "breathe-deep",
+  "text": "Breathe deep",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "hold-on-top",
+  "text": "Hold on top",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "breathe-up",
+  "text": "Breathe up",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "get-ready",
+  "text": "Get ready",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "sit-comfortably",
+  "text": "Sit comfortably",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "breathe-light",
+  "text": "Breathe light",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "breathe-normally-through-your-nose",
+  "text": "Breathe normally through your nose",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "relax",
+  "text": "Relax",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "normal-breath-out",
+  "text": "Normal breath out",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "big-breath-in",
+  "text": "Big breath in",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "breathe-out",
+  "text": "Breathe out",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "hold-and-keep-walking",
+  "text": "Hold and keep walking",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "session-complete",
+  "text": "Session complete",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "nice-work",
+  "text": "Nice work",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "breathe-out-and-hold",
+  "text": "Breathe out, and hold",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "final-round",
+  "text": "Final round",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-1",
+  "text": "Round 1",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-2",
+  "text": "Round 2",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-3",
+  "text": "Round 3",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-4",
+  "text": "Round 4",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-5",
+  "text": "Round 5",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-6",
+  "text": "Round 6",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-7",
+  "text": "Round 7",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-8",
+  "text": "Round 8",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-9",
+  "text": "Round 9",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-10",
+  "text": "Round 10",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-11",
+  "text": "Round 11",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-12",
+  "text": "Round 12",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-13",
+  "text": "Round 13",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-14",
+  "text": "Round 14",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-15",
+  "text": "Round 15",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-16",
+  "text": "Round 16",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-17",
+  "text": "Round 17",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-18",
+  "text": "Round 18",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-19",
+  "text": "Round 19",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "round-20",
+  "text": "Round 20",
+  "style": "cue",
+  "prev": "Settle in, and now, "
+ },
+ {
+  "slug": "5",
+  "text": "5",
+  "style": "cue",
+  "prev": "Three, two, "
+ },
+ {
+  "slug": "4",
+  "text": "4",
+  "style": "cue",
+  "prev": "Three, two, "
+ },
+ {
+  "slug": "3",
+  "text": "3",
+  "style": "cue",
+  "prev": "Three, two, "
+ },
+ {
+  "slug": "2",
+  "text": "2",
+  "style": "cue",
+  "prev": "Three, two, "
+ },
+ {
+  "slug": "1",
+  "text": "1",
+  "style": "cue",
+  "prev": "Three, two, "
+ },
+ {
+  "slug": "nothing-to-do-but-wait",
+  "text": "Nothing to do but wait",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "soft-belly",
+  "text": "Soft belly",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "loose-jaw",
+  "text": "Loose jaw",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "let-the-shoulders-drop",
+  "text": "Let the shoulders drop",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "stay-still",
+  "text": "Stay still",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "stillness-is-the-skill",
+  "text": "Stillness is the skill",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "eyes-soft",
+  "text": "Eyes soft",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "nothing-to-fix",
+  "text": "Nothing to fix",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "the-urge-is-a-signal-not-an-emergency",
+  "text": "The urge is a signal, not an emergency",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "let-it-build",
+  "text": "Let it build",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "it-is-supposed-to",
+  "text": "It is supposed to",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "swallow-if-you-need-to",
+  "text": "Swallow if you need to",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "keep-holding",
+  "text": "Keep holding",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "this-is-co-not-a-lack-of-oxygen",
+  "text": "This is CO₂, not a lack of oxygen",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "loosen-the-throat",
+  "text": "Loosen the throat",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "this-is-the-part-that-trains-you",
+  "text": "This is the part that trains you",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "ride-it-out",
+  "text": "Ride it out",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "stay-soft-nearly-there",
+  "text": "Stay soft, nearly there",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "hold-the-calm-not-the-breath",
+  "text": "Hold the calm, not the breath",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "last-stretch",
+  "text": "Last stretch",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "do-not-fight-it",
+  "text": "Do not fight it",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "slow-and-quiet",
+  "text": "Slow and quiet",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "nose-only",
+  "text": "Nose only",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "do-not-over-breathe-normal-breaths",
+  "text": "Do not over-breathe — normal breaths",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "let-the-exhale-fall-out-on-its-own",
+  "text": "Let the exhale fall out on its own",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "shoulders-down",
+  "text": "Shoulders down",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "belly-doing-the-work",
+  "text": "Belly doing the work",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "quiet-enough-that-nobody-would-hear-you",
+  "text": "Quiet enough that nobody would hear you",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "through-the-nose-low-into-the-belly",
+  "text": "Through the nose, low into the belly",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "fill-slow",
+  "text": "Fill slow",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "no-rush-at-the-top",
+  "text": "No rush at the top",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "chest-quiet-ribs-wide",
+  "text": "Chest quiet, ribs wide",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "long-and-slow",
+  "text": "Long and slow",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "empty-without-forcing",
+  "text": "Empty without forcing",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "let-it-fall-out-of-you",
+  "text": "Let it fall out of you",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "slower-than-feels-necessary",
+  "text": "Slower than feels necessary",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "breathe-less-than-you-want",
+  "text": "Breathe less than you want",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "small-slow-silent",
+  "text": "Small, slow, silent",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "keep-the-hunger-mild-and-steady",
+  "text": "Keep the hunger mild and steady",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "barely-moving",
+  "text": "Barely moving",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "that-is-the-dose",
+  "text": "That is the dose",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "if-it-turns-to-panic-take-a-breath-and-come-back",
+  "text": "If it turns to panic, take a breath and come back",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "full-in-let-it-fall-out",
+  "text": "Full in, let it fall out",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "keep-the-rhythm",
+  "text": "Keep the rhythm",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "do-not-force-the-exhale",
+  "text": "Do not force the exhale",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "deep-and-steady-no-faster-than-the-count",
+  "text": "Deep and steady — no faster than the count",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "hold-it-on-top",
+  "text": "Hold it on top",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "squeeze-it-in-and-hold",
+  "text": "Squeeze it in and hold",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "chest-full",
+  "text": "Chest full",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "keep-walking",
+  "text": "Keep walking",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "easy-pace",
+  "text": "Easy pace",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "steps-steady-shoulders-loose",
+  "text": "Steps steady, shoulders loose",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "do-not-speed-up-to-finish-sooner",
+  "text": "Do not speed up to finish sooner",
+  "style": "line",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "wait-for-the-first-definite-urge-not-your-limit",
+  "text": "Wait for the first definite urge, not your limit",
+  "style": "test",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "the-first-swallow-or-throat-twitch-that-is-it",
+  "text": "The first swallow or throat twitch — that is it",
+  "style": "test",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "do-not-push-past-it",
+  "text": "Do not push past it",
+  "style": "test",
+  "prev": "Keep going. "
+ },
+ {
+  "slug": "this-is-a-measurement-not-a-hold",
+  "text": "This is a measurement, not a hold",
+  "style": "test",
+  "prev": "Keep going. "
+ }
+]
