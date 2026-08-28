@@ -73,7 +73,7 @@ version — bigger, longer, more about low oxygen).
 **Setup → Session → Sequence** runs blocks back to back, each with its own
 protocol and settings: coherent breathing into a CO₂ table, a table into a
 wind-down, or the BOLT test on the front of anything. Quick start ships
-sixteen ready-made sessions including three multi-block ones, and you can save
+sixteen ready-made sessions, two of them multi-block, and you can save
 your own setup alongside them.
 
 ### 4-week program
