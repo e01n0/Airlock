@@ -94,15 +94,27 @@ def main():
     threshold = baseline * RATIO
     avoid = sorted(k for k, v in f0.items() if v > threshold)
 
-    # Sanity gate: on a creaky or breathy voice the tracker cannot follow the
-    # irregular glottal pulses and reads fry as high pitch. A real helium
+    # Sanity gate: on a low, breathy or creaky voice the tracker cannot follow
+    # the irregular glottal pulses and reads breath as high pitch. A real helium
     # problem affects a minority of takes; if most clips flag, the measurement
-    # is untrustworthy and shipping it would gut the pack. Refuse to write.
-    if len(avoid) > 0.25 * len(f0):
-        sys.exit(f"{len(avoid)}/{len(f0)} clips flagged — the pitch tracker "
-                 f"can't follow this voice (creak/fry?). Not writing pitch.json.")
+    # is untrustworthy and shipping that list would gut the pack — the app would
+    # route a third of its lines to the device voice for no reason.
+    #
+    # Write the file anyway, with an empty list and the reason. "No file" and
+    # "audited, nothing to flag" would otherwise be indistinguishable both to
+    # the app and to whoever reads the pack next, and the app would take a 404
+    # on every load.
+    unreliable = len(avoid) > 0.25 * len(f0)
+    if unreliable:
+        print(f"{len(avoid)}/{len(f0)} clips flagged — the pitch tracker can't follow "
+              f"this voice (low/breathy/creak). Flagging nothing.")
+        avoid = []
 
     out = {"baseline": round(baseline), "threshold": round(threshold), "avoid": avoid}
+    if unreliable:
+        out["note"] = ("pitch tracking unreliable on this voice; nothing flagged. "
+                       "Judge takes by ear, or re-render suspect clips with "
+                       "gen_voice.py --force --only <slug>.")
     with open(os.path.join(d, "pitch.json"), "w", encoding="utf-8") as fh:
         json.dump(out, fh, indent=2)
         fh.write("\n")

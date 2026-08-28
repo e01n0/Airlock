@@ -166,7 +166,8 @@ def main():
 
     print(f"\nrendered {made}, skipped {skipped}, failed {failed}. "
           f"manifest lists {len(slugs)} clips.")
-    print("Next: python3 gen_trim.py --pack %s && python3 gen_pitch.py --pack %s" % (args.pack, args.pack))
+    print("Next: python3 gen_level.py --pack %s && python3 gen_pitch.py --pack %s"
+          % (args.pack, args.pack))
     print(f"Then pick the pack under Setup → Coaching → Coach voice and commit voice/{args.pack}/.")
 
 

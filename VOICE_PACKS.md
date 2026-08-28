@@ -7,19 +7,30 @@ Audio. That keeps the app self-contained and offline-capable (it just ships some
 audio files), and no API key is ever stored in it: you regenerate the voice by
 running the script with your own key.
 
-## No pack is committed yet
+## The shipped packs
 
-Rendering a pack spends ElevenLabs characters against a real account, so this
-repo ships the **toolchain and the plumbing**, not the audio. Until you render
-one, the app uses your **device's own speech engine** (Setup → Coaching → Coach
-voice → *Device voice*), which needs no download and works offline, but sounds
-like a phone. The chime and the guide tone are synthesised in the browser and
-never depended on any of this.
+Two, both British women, rendered from `voice/phrases.json` with
+`eleven_multilingual_v2`:
 
-Everything downstream is already wired: `VOICE_PACKS` in `index.html` lists two
-pack ids, the picker shows them, the manifest/pitch/prefetch paths are live, and
-the service worker carries clips across app upgrades. Render into
-`voice/vera/` or `voice/sten/` and it lights up.
+| pack | voice | register | character |
+|---|---|---|---|
+| **`wren`** *(default)* | ElevenLabs **Lily** (`pFZP5JQG7iQjIQuC4Bku`) | ~146 Hz | Low, breathy, unhurried. The brief. |
+| **`bly`** | ElevenLabs **Alice** (`Xb7hH8MSUJpSbSDYk0k2`) | ~213 Hz | Clearer and brighter — easier to follow in a noisy room. |
+
+Wren is the default because it is the softer of the two by a wide margin. On a
+bare cue like *"Hold"*, Lily reads flat — a 9–15 Hz spread of pitch across the
+word — while Alice swings about 150 Hz across the same syllable. That
+expressiveness is an asset in a narration and a liability in an app that says
+"hold" to somebody forty seconds into an empty-lung hold. Bly is there for
+people who find Wren too quiet to follow.
+
+The **device voice** (Setup → Coaching → Coach voice → *Device voice*) remains
+as a fallback: it needs no download and covers any line a pack is missing.
+Airlock aims its auto-selection at the same brief — a British female voice, with
+the British male voices explicitly ranked down so "Daniel" cannot win an en-GB
+search by being first in the list — and you can override it with a picker that
+names each voice's locale. The chime and the guide tone are synthesised in the
+browser and never depended on any of this.
 
 ## How it works
 
@@ -84,7 +95,9 @@ cue.
    ```bash
    export ELEVENLABS_API_KEY=sk_...
    node gen_phrases.js
-   python3 gen_voice.py --voice-id <VOICE_ID> --pack vera --force --stitch
+   python3 gen_voice.py  --voice-id <VOICE_ID> --pack wren --force --stitch
+   python3 gen_level.py  --pack wren     # even out the levels, and QA the render
+   python3 gen_pitch.py  --pack wren     # helium audit
    ```
 
    `--stitch` chains renders with `previous_request_ids` so the whole batch
@@ -93,7 +106,9 @@ cue.
    in `index.html`, re-run `gen_phrases.js`, and re-render that one clip with
    `--only <slug>`.
 
-3. Audit the pitch (below), then hit **Test voice** in Setup to hear it.
+3. Act on what `gen_level.py` reports, then hit **Test voice** in Setup to hear
+   it. Re-render anything it calls near-silent or an odd length, then level
+   again — see *Levelling* below.
 
 4. **Commit `voice/<pack>/`** so it deploys with the static site:
 
@@ -105,6 +120,29 @@ cue.
    worker serves voice audio cache-first and deliberately carries it across app
    upgrades, so without the bump a returning device plays one stale take before
    its background refresh lands.
+
+## Levelling: the check that matters most
+
+**Run `gen_level.py` on every pack.** Each clip is rendered in isolation, so
+ElevenLabs gives each its own level, and on a soft voice that spread is not
+cosmetic. Wren's first render came back spanning **26 dB**, with four coaching
+lines so quiet they sat under the app's silence-trim threshold — the coach
+dropped those lines with no sound at all, and no spot check of half a dozen
+clips would have caught it. Re-rendering the offenders and levelling brought the
+pack to 10.6 dB and nothing silent.
+
+`gen_level.py` normalises every clip in place to a common RMS with a peak
+ceiling, and reports three things worth acting on before you commit a pack:
+
+- **near-silent clips** — re-render these; levelling a take that is mostly room
+  tone just amplifies room tone,
+- **clipping**,
+- **clips whose voiced length is far out of step with their text**, which is
+  what a truncated or wrong-text render looks like from the outside.
+
+The app levels clips again at playback, but that is a safety net with a peak
+ceiling on it, not a substitute: it cannot rescue a take that trims to nothing
+before it ever reaches the gain stage.
 
 ## Pitch audit: catching helium takes
 
@@ -126,13 +164,20 @@ python3 gen_pitch.py --pack vera   # -> voice/vera/pitch.json
 
 At run time a line containing a flagged clip is spoken by the device voice
 instead — a plainer voice saying the whole thing beats a squeaked *"hold"*. The
-file is optional: with no `pitch.json`, nothing is flagged. The script refuses
-to write one when more than a quarter of the pack flags, because that means the
-pitch tracker cannot follow the voice (creak or fry reads as false falsetto)
-rather than that the pack is broken.
+real fix is a re-render, and the script prints the exact command; Bly's three
+flagged takes were re-rendered and it now audits clean.
 
-The real fix for a flagged clip is a re-render — the script prints the exact
-command.
+**The audit does not work on every voice, and it says so.** When more than a
+quarter of a pack flags, the tracker is not following the voice rather than the
+pack being broken — a low or breathy read has little periodic energy, and the
+estimator splits between the true pitch and its harmonics. Wren trips exactly
+this: measured against her sentences she "flags" 29 of 101 clips, all of them
+fine. So the script writes `pitch.json` with an empty `avoid` list and a `note`
+recording why, rather than either shipping a list that would gut the pack or
+leaving no file at all — with no file, the app cannot tell "audited, nothing
+wrong" from "never audited", and takes a 404 on every load.
+
+For a voice like that, judge the takes by ear and re-render the suspect ones.
 
 ## Offline
 

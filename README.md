@@ -105,13 +105,14 @@ Three layers, and each works without the others:
   drops in coaching lines — how many is up to you (**Full**, **Normal**,
   **Sparse**, **Silent**).
 
-The coach is designed around **recorded clips**, the same way Coach Fred's
-corner man is: a finite vocabulary of short phrases, each pre-rendered with
-ElevenLabs and played back-to-back, so it sounds like a person rather than a
-readout. **No pack is committed to this repo yet** — rendering one costs
-ElevenLabs credit against your own account, so the toolchain ships instead and
-the app falls back to your **device's own speech engine**, which needs no
-download. See [VOICE_PACKS.md](VOICE_PACKS.md) to render a pack with your voice.
+The coach is **recorded clips**, the same way Coach Fred's corner man is: a
+finite vocabulary of short phrases, each pre-rendered with ElevenLabs and played
+back-to-back, so it sounds like a person rather than a readout. Two British
+women ship with the app — **Wren** (soft, low, unhurried; the default) and
+**Bly** (clearer and brighter, for a noisier room). Your phone's own speech
+engine is there as a fallback and covers any line a pack is missing; Airlock
+aims its auto-selection at a British female voice and lets you override it. See
+[VOICE_PACKS.md](VOICE_PACKS.md) to render a pack with a voice of your own.
 
 ## Your record
 

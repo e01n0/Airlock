@@ -514,6 +514,11 @@
       <div class="field">
         <div class="field-label"><span class="lbl-grp">Coach voice <button class="help-btn" data-help="hVoice">?</button></span></div>
         <select id="sVoice"></select>
+        <div id="deviceVoiceField" style="display:none;margin-top:9px;">
+          <div class="field-label" style="margin-bottom:7px;"><span style="font-size:13px;">Which device voice</span></div>
+          <select id="sDeviceVoice"></select>
+          <div class="note" id="deviceVoiceNote" style="margin-top:8px;"></div>
+        </div>
         <div class="note help" id="hVoice">Airlock speaks with <b>recorded clips</b> when a voice pack is installed &mdash; every cue is a short audio file, so the coach sounds like a person and works offline. <b>Device voice</b> uses your phone&rsquo;s own speech engine, which needs no download but sounds like a phone. <b>Tones only</b> drops speech entirely and paces you with the chamber and the chime.</div>
       </div>
 
@@ -1045,7 +1050,7 @@
     block:{proto:"box", mins:5, inS:4, hiS:4, outS:4, hoS:4},
     seq:[{proto:"coherent", mins:5, inS:5.5, outS:5.5},{proto:"co2", rounds:8, hold:45, rest:120, restStep:15, lungs:"empty"}],
     prep:10,
-    voice:"device", chatter:"normal", speed:1,
+    voice:"pack:wren", ttsVoice:null, chatter:"normal", speed:1,
     chime:"soft", guideTone:false, countIn:true,
     vibrateOn:true, playInSilent:true, wakeOn:true,
     scaleToBolt:true,
@@ -1239,9 +1244,13 @@
     urgent:{rate:1.06, vol:1.0},
     warm:  {rate:0.96, vol:0.96}
   };
+  // The brief for the recorded coach: a soft British female voice — low, slow,
+  // unhurried, no exclamation in it. Anything that sounds motivating on a demo
+  // page sounds alarming when it says "hold" to somebody forty seconds into an
+  // empty-lung hold. See VOICE_PACKS.md to render one.
   const VOICE_PACKS = [
-    {id:"vera", label:"Vera — calm, close"},
-    {id:"sten", label:"Sten — flat, factual"}
+    {id:"wren", label:"Wren — soft, British"},
+    {id:"bly",  label:"Bly — clear, British"}
   ];
   const isPackVal = v => typeof v==="string" && v.startsWith("pack:");
   const packIdOf  = v => isPackVal(v) ? v.slice(5) : null;
@@ -1280,7 +1289,11 @@
     }
     const rms = Math.sqrt(sumSq/Math.max(1,n));
     g = rms>1e-4 ? NORM_RMS/rms : 1;
-    g = clamp(g, 0.6, 2.2);
+    // Wide enough to rescue a take rendered well below the rest of its pack
+    // (gen_level.py evens them out at build time, but a pack rendered
+    // elsewhere still has to be audible), and the peak ceiling below keeps
+    // the lift honest.
+    g = clamp(g, 0.5, 6);
     g = Math.min(g, 0.98/peak);
     normCache.set(buf, g);
     return g;
@@ -1331,14 +1344,22 @@
   // Rendered clips carry 50–150ms of lead-in/out silence; stacked, that makes
   // a sentence sound like a row of separate takes. Measure the voiced region
   // once per decoded buffer and play just that.
-  const trimCache = new WeakMap(), TRIM_AMP = 0.02;
+  const trimCache = new WeakMap();
   function trimBounds(buf){
     let t = trimCache.get(buf); if(t) return t;
     const d = buf.getChannelData(0), n = d.length;
+    // The threshold has to be relative to the clip's own peak. A fixed one
+    // works only while every take lands at the same level, and a soft, breathy
+    // voice renders some lines 20dB below the rest — under an absolute floor
+    // those clips trim to nothing and the coach silently drops the line.
+    let peak = 0;
+    for(let i=0;i<n;i++){ const a=Math.abs(d[i]); if(a>peak) peak=a; }
+    const amp = Math.max(0.004, peak*0.06);
     let a=0, b=n-1;
-    while(a<n && Math.abs(d[a])<TRIM_AMP) a++;
-    while(b>a && Math.abs(d[b])<TRIM_AMP) b--;
+    while(a<n && Math.abs(d[a])<amp) a++;
+    while(b>a && Math.abs(d[b])<amp) b--;
     const sr = buf.sampleRate;
+    if(a>=b){ t = {off:0, dur:buf.duration}; trimCache.set(buf, t); return t; }   // all quiet: play it whole
     const off = Math.max(0, a/sr - 0.015);
     const dur = Math.min(buf.duration - off, (b-a)/sr + 0.045);
     t = {off, dur: Math.max(0.05, dur)};
@@ -1348,7 +1369,7 @@
   // Voice pack revision — bump when clips are re-rendered. The service worker
   // serves voice clips cache-first and carries them across app upgrades, so a
   // re-rendered clip would otherwise play one stale take first.
-  const VOICE_REV = "2026-08-28a";
+  const VOICE_REV = "2026-08-28b";
   const voiceFresh = (()=>{
     try{
       if(typeof caches==="undefined" || store.get("airlock.voiceRev")===VOICE_REV) return Promise.resolve();
@@ -1404,21 +1425,53 @@
   }
 
   /* Device speech — the stand-in until a recorded pack is installed, and the
-     only thing that can voice a line no pack covers. */
+     only thing that can voice a line no pack covers.
+
+     Auto-selection aims at the same brief as the recorded pack: a soft British
+     female voice. Device inventories vary wildly and expose no gender field, so
+     this scores what is actually installed — locale first, then the named
+     voices each platform ships, with the British male voices explicitly pushed
+     down so "Daniel" and "Arthur" can't win an en-GB search by being first in
+     the list. Whatever it lands on, the listener can override it in Setup. */
+  const TTS_FEM = /serena|kate|stephanie|martha|sonia|hazel|libby|maisie|amy|emily|fiona|susan|karen|samantha|female|\bava\b|\bjoanna\b|\bnicky\b/i;
+  // \bmale\b, not `male` — "Female" contains it, and unanchored it would push
+  // every female voice to the bottom of the list.
+  const TTS_MASC = /daniel|arthur|oliver|george|ryan|thomas|\bmale\b|\bguy\b|\bbrian\b|\balex\b|\bfred\b|\btom\b|\brishi\b/i;
+  const ttsList = () => {
+    if(!("speechSynthesis" in window)) return [];
+    const all = speechSynthesis.getVoices() || [];
+    const en = all.filter(v=>/^en([-_]|$)/i.test(v.lang||""));
+    return en.length ? en : all;
+  };
+  function ttsScore(v){
+    const n = v.name || "", lang = (v.lang||"").replace("_","-");
+    let s = 0;
+    if(/^en-GB/i.test(lang)) s += 40;              // British before anything else
+    else if(/^en-(AU|IE|NZ|ZA)/i.test(lang)) s += 14;
+    else if(/^en/i.test(lang)) s += 4;
+    if(TTS_FEM.test(n))  s += 30;
+    if(TTS_MASC.test(n)) s -= 45;                  // never win on locale alone
+    if(/google uk english female/i.test(n)) s += 18;
+    if(/google uk english male/i.test(n))   s -= 18;
+    if(/natural|neural|enhanced|premium|siri/i.test(n)) s += 10;   // the better engines
+    if(/novelty|whisper|bells|bad news|good news|organ|zarvox|trinoids|cellos/i.test(n)) s -= 60;
+    if(v.localService) s += 3;                     // no network hiccup mid-hold
+    return s;
+  }
   let ttsVoice = null, ttsReady = false;
   function pickTtsVoice(){
-    if(!("speechSynthesis" in window)) return;
-    const all = speechSynthesis.getVoices() || [];
-    if(!all.length) return;
-    const en = all.filter(v=>/^en([-_]|$)/i.test(v.lang||""));
-    const pool = en.length ? en : all;
-    ttsVoice = pool.find(v=>/samantha|serena|karen|daniel|google uk|google us|natural|neural/i.test(v.name))
-            || pool.find(v=>v.default) || pool[0];
+    const pool = ttsList();
+    if(!pool.length) return;
+    // An explicit choice always wins, as long as it is still installed.
+    const chosen = cfg.ttsVoice && pool.find(v=>v.voiceURI===cfg.ttsVoice);
+    ttsVoice = chosen || pool.slice().sort((a,b)=>ttsScore(b)-ttsScore(a))[0] || null;
     ttsReady = true;
   }
   if("speechSynthesis" in window){
     pickTtsVoice();
-    speechSynthesis.addEventListener("voiceschanged", pickTtsVoice);
+    // Chrome populates the list asynchronously, and it can change when a
+    // language pack is installed — repick and refresh the picker when it does.
+    speechSynthesis.addEventListener("voiceschanged", ()=>{ pickTtsVoice(); renderDeviceVoices(); });
   }
   function ttsSay(text, tone, onend){
     if(!("speechSynthesis" in window) || !text){ if(onend) onend(); return; }
@@ -1427,8 +1480,11 @@
       const u = new SpeechSynthesisUtterance(text);
       const t = TONES[tone] || TONES.cue;
       if(ttsVoice) u.voice = ttsVoice;
-      u.rate = clamp((cfg.speed||1) * (t.rate||1) * 0.95, 0.5, 2);
-      u.pitch = tone==="calm" ? 0.94 : 1;
+      // Softer than default across the board: device voices read a bare cue
+      // like "Hold" briskly and a shade bright, which is the wrong register
+      // for this app whatever the tone.
+      u.rate = clamp((cfg.speed||1) * (t.rate||1) * 0.90, 0.5, 2);
+      u.pitch = tone==="calm" ? 0.90 : tone==="urgent" ? 0.98 : 0.94;
       u.volume = t.vol!=null ? t.vol : 1;
       if(onend){ u.onend = onend; u.onerror = onend; }
       speechSynthesis.speak(u);
@@ -1457,6 +1513,34 @@
     }
     ttsSay(String(text), tone);
   }
+  /* Which of the device's own voices to use. Auto-selection aims at a soft
+     British female one, but what is installed differs on every phone, so the
+     list is here to be overridden — and it names the locale, because "Karen"
+     is Australian on one device and American on the next. */
+  function renderDeviceVoices(){
+    const sel = document.getElementById("sDeviceVoice");
+    const field = document.getElementById("deviceVoiceField");
+    if(!sel || !field) return;
+    field.style.display = (cfg.voice==="device") ? "block" : "none";
+    if(cfg.voice!=="device") return;
+    const pool = ttsList().slice().sort((a,b)=>ttsScore(b)-ttsScore(a));
+    sel.innerHTML = "";
+    const auto = document.createElement("option");
+    auto.value = ""; auto.textContent = "Best British voice on this device";
+    sel.appendChild(auto);
+    pool.forEach(v=>{
+      const o = document.createElement("option");
+      o.value = v.voiceURI;
+      o.textContent = `${v.name} · ${(v.lang||"").replace("_","-")}`;
+      sel.appendChild(o);
+    });
+    sel.value = (cfg.ttsVoice && pool.some(v=>v.voiceURI===cfg.ttsVoice)) ? cfg.ttsVoice : "";
+    const note = document.getElementById("deviceVoiceNote");
+    if(!pool.length) note.textContent = "No speech voices found on this device — use Tones only, or install a recorded pack.";
+    else if(ttsVoice) note.innerHTML = `Using <b>${ttsVoice.name}</b> (${(ttsVoice.lang||"").replace("_","-")}). ` +
+      (/^en-GB/i.test(ttsVoice.lang||"") ? "" : "No British voice is installed here — on iOS add one under Settings → Accessibility → Spoken Content → Voices; on Android, in your speech engine's settings.");
+    else note.textContent = "";
+  }
   function loadVoices(){
     const sel = document.getElementById("sVoice");
     if(sel){
@@ -1468,6 +1552,8 @@
       if(!["device","off"].includes(cfg.voice) && !VOICE_PACKS.some(p=>("pack:"+p.id)===cfg.voice)) cfg.voice = "device";
       sel.value = cfg.voice;
     }
+    pickTtsVoice();
+    renderDeviceVoices();
     applyVoicePack();
   }
   duckOtherAudio();
@@ -2196,9 +2282,14 @@
   $("sVoice").addEventListener("change", e=>{
     cfg.voice = e.target.value; save();
     clipBuf.clear(); voicePackWant = null; voicePack = null;
-    applyVoicePack(); unlockAudio();
+    applyVoicePack(); unlockAudio(); renderDeviceVoices();
     setTimeout(()=>say("Inhale. Hold. Exhale", "cue"), 350);
     renderPrefetchNote();
+  });
+  $("sDeviceVoice").addEventListener("change", e=>{
+    cfg.ttsVoice = e.target.value || null; save();
+    pickTtsVoice(); renderDeviceVoices(); unlockAudio();
+    setTimeout(()=>say("Breathe out, and hold", "calm"), 250);   // hear it on a real line, not a bare cue
   });
   function wireSeg(id, key, after){
     const host = $(id);
@@ -2579,7 +2670,7 @@
     $("seqBox").style.display    = cfg.mode==="sequence" ? "block" : "none";
     document.querySelectorAll("#segChatter button").forEach(b=>b.classList.toggle("on", b.dataset.v===cfg.chatter));
     document.querySelectorAll("#segChime button").forEach(b=>b.classList.toggle("on", b.dataset.v===cfg.chime));
-    renderSingle(); renderSeq(); renderPresets(); renderBolt(); renderRecord(); renderLog(); renderPlan(); renderPrefetchNote();
+    renderSingle(); renderSeq(); renderPresets(); renderBolt(); renderRecord(); renderLog(); renderPlan(); renderPrefetchNote(); renderDeviceVoices();
     $("verLine").textContent = `Airlock ${APP_VERSION}`;
   }
   renderAll();

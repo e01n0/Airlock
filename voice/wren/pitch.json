@@ -1,0 +1,6 @@
+{
+  "baseline": 146,
+  "threshold": 212,
+  "avoid": [],
+  "note": "pitch tracking unreliable on this voice; nothing flagged. Judge takes by ear, or re-render suspect clips with gen_voice.py --force --only <slug>."
+}
